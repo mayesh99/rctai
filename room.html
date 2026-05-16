@@ -1,0 +1,313 @@
+# نظام القاعات المتاحة من ملف Excel
+
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام القاعات المتاحة</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      font-family: Tahoma;
+      background: #f4f6f9;
+      padding: 20px;
+      margin: 0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #1e293b;
+      margin-bottom: 30px;
+    }
+
+    .top-box {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    input[type="file"] {
+      margin-bottom: 15px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    select {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      min-width: 180px;
+    }
+
+    .rooms {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .room-name {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .room-type {
+      color: #475569;
+      margin-bottom: 8px;
+    }
+
+    .available {
+      background: #dcfce7;
+      color: #166534;
+      padding: 8px 12px;
+      border-radius: 10px;
+      display: inline-block;
+      font-weight: bold;
+    }
+
+    .busy {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 8px 12px;
+      border-radius: 10px;
+      display: inline-block;
+      font-weight: bold;
+    }
+
+    .info {
+      margin-top: 12px;
+      color: #334155;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+
+<h1>نظام القاعات المتاحة</h1>
+
+<div class="top-box">
+
+  <input type="file" id="excelFile" accept=".xlsx,.xls">
+
+  <div class="filters">
+
+    <select id="dayFilter">
+      <option value="all">كل الأيام</option>
+      <option value="الأحد">الأحد</option>
+      <option value="الاثنين">الاثنين</option>
+      <option value="الثلاثاء">الثلاثاء</option>
+      <option value="الأربعاء">الأربعاء</option>
+      <option value="الخميس">الخميس</option>
+    </select>
+
+    <select id="typeFilter">
+      <option value="all">كل الأنواع</option>
+      <option value="معمل">معمل</option>
+      <option value="نظري">نظري</option>
+      <option value="دوائر">دوائر</option>
+      <option value="تجميع">تجميع</option>
+    </select>
+
+  </div>
+
+</div>
+
+<div class="rooms" id="roomsContainer"></div>
+
+<script>
+
+let schedules = [];
+
+const roomTypes = {
+  "1012520003": "دوائر",
+  "1012520011": "دوائر",
+  "1012520002": "تجميع",
+  "1012520010": "تجميع"
+};
+
+const roomsContainer = document.getElementById("roomsContainer");
+const dayFilter = document.getElementById("dayFilter");
+const typeFilter = document.getElementById("typeFilter");
+
+// رفع ملف Excel
+
+document.getElementById('excelFile').addEventListener('change', function(e){
+
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(event){
+
+    const data = new Uint8Array(event.target.result);
+    const workbook = XLSX.read(data, {type: 'array'});
+
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+
+    schedules = XLSX.utils.sheet_to_json(worksheet);
+
+    renderRooms();
+  };
+
+  reader.readAsArrayBuffer(file);
+
+});
+
+function renderRooms(){
+
+  roomsContainer.innerHTML = "";
+
+  const selectedDay = dayFilter.value;
+  const selectedType = typeFilter.value;
+
+  const allRooms = Object.keys(roomTypes);
+
+  allRooms.forEach(room => {
+
+    const roomType = roomTypes[room];
+
+    const roomSchedules = schedules.filter(item => {
+
+      const roomMatch = String(item['قاعة']) === room;
+
+      const dayMatch =
+        selectedDay === 'all' || item['اليوم'] === selectedDay;
+
+      return roomMatch && dayMatch;
+
+    });
+
+    const typeMatch =
+      selectedType === 'all' || roomType === selectedType;
+
+    if(!typeMatch) return;
+
+    // إذا لا يوجد جدول = متاحة
+
+    if(roomSchedules.length === 0){
+
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      card.innerHTML = `
+        <div class="room-name">${room}</div>
+
+        <div class="room-type">
+          النوع: ${roomType}
+        </div>
+
+        <div class="available">متاحة طوال اليوم</div>
+      `;
+
+      roomsContainer.appendChild(card);
+
+    }
+
+    else {
+
+      roomSchedules.forEach(item => {
+
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+
+          <div class="room-name">${room}</div>
+
+          <div class="room-type">
+            النوع: ${roomType}
+          </div>
+
+          <div class="busy">محجوزة</div>
+
+          <div class="info">
+            <b>اليوم:</b> ${item['اليوم']}<br>
+            <b>الوقت:</b> ${item['الوقت']}<br>
+            <b>المادة:</b> ${item['اسم المقرر']}<br>
+            <b>المدرب:</b> ${item['اسم المدرب']}
+          </div>
+
+        `;
+
+        roomsContainer.appendChild(card);
+
+      });
+
+    }
+
+  });
+
+}
+
+// تحديث الفلاتر
+
+dayFilter.addEventListener('change', renderRooms);
+typeFilter.addEventListener('change', renderRooms);
+
+</script>
+
+</body>
+</html>
+```
+
+## ماذا يفعل هذا النظام؟
+
+* ترفع ملف Excel مباشرة
+* يقرأ بيانات الجدول تلقائياً
+* يعرض القاعات المحجوزة والمتاحة
+* فلترة حسب اليوم
+* فلترة حسب نوع القاعة
+* يعرض:
+
+  * الوقت
+  * اسم المقرر
+  * اسم المدرب
+
+## القاعات المعرفة حالياً
+
+### معامل الدوائر
+
+* 1012520003
+* 1012520011
+
+### معامل التجميع
+
+* 1012520002
+* 1012520010
+
+## طريقة التشغيل
+
+1. انسخ الكود داخل ملف باسم:
+
+```text
+index.html
+```
+
+2. افتح الملف بالمتصفح.
+
+3. ارفع ملف Excel.
+
+4. سيظهر لك مباشرة:
+
+* القاعات المتاحة
+* القاعات المحجوزة
+* أوقاتها
+* تفاصيلها

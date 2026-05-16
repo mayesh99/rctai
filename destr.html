@@ -1,0 +1,164 @@
+# schedule_generator.py
+import pandas as pd
+import math
+from collections import defaultdict, deque
+
+# Adjust input path/name
+INPUT_PATH = "input.xlsx"   # أو "timeslots.csv" و "groups.csv"
+OUTPUT_PATH = "schedule_output.xlsx"
+
+# --- اقرأ البيانات ---
+def read_input(path):
+    if path.endswith(".xlsx"):
+        x = pd.read_excel(path, sheet_name=None)
+        # توقع وجود ورقتين باسم timeslots و groups أو استخدم أول ورقتين
+        if "timeslots" in x and "groups" in x:
+            timeslots = x["timeslots"]
+            groups = x["groups"]
+        else:
+            sheets = list(x.keys())
+            timeslots = x[sheets[0]]
+            groups = x[sheets[1]]
+    else:
+        # ملف CSV مفصول: توقع ملفين timeslots.csv و groups.csv في نفس المجلد
+        timeslots = pd.read_csv("timeslots.csv")
+        groups = pd.read_csv("groups.csv")
+    return timeslots, groups
+
+# --- تحضير الشرايح ---
+def build_slots(timeslots_df):
+    # توقع أعمدة: day, slot_index, period (morning/afternoon), start_time, end_time, room (اختياري)
+    required_cols = ["day", "slot_index", "period"]
+    for c in required_cols:
+        if c not in timeslots_df.columns:
+            raise ValueError(f"timeslots missing column: {c}")
+    slots = []
+    for _, r in timeslots_df.iterrows():
+        slots.append({
+            "day": str(r["day"]),
+            "slot_index": int(r["slot_index"]),
+            "period": str(r["period"]).lower(),  # 'morning' or 'afternoon'
+            "start_time": r.get("start_time", None),
+            "end_time": r.get("end_time", None),
+            "room": r.get("room", None)
+        })
+    # ترتيب يومي ثم شريحة
+    slots.sort(key=lambda s: (s["day"], s["slot_index"]))
+    return slots
+
+# --- تحضير قائمة الجلسات المطلوبة من جدول الشُعب ---
+def expand_groups(groups_df):
+    # توقع أعمدة: department, course, group_count, weekly_slots (اختياري، افتراضي 1)
+    if "department" not in groups_df.columns or "course" not in groups_df.columns or "group_count" not in groups_df.columns:
+        raise ValueError("groups missing required columns: department, course, group_count")
+    sessions = []  # كل عنصر يمثل جلسة واحدة (حصة) لشعبة ما
+    for _, r in groups_df.iterrows():
+        dept = str(r["department"])
+        course = str(r["course"])
+        group_count = int(r["group_count"])
+        weekly_slots = int(r.get("weekly_slots", 1))
+        for g in range(1, group_count + 1):
+            gid = f"{course}_G{g}"
+            # لكل شعبة نولد 'weekly_slots' جلسات منفصلة
+            for sidx in range(weekly_slots):
+                sessions.append({
+                    "department": dept,
+                    "course": course,
+                    "group_id": gid,
+                    "assigned": False
+                })
+    return sessions
+
+# --- توزيع جلسات على الشرايح (خوارزمية جشعة بسيطة مع توازن صباح/مساء وديمومة أيام مختلفة) ---
+def assign_sessions_to_slots(slots, sessions):
+    total_sessions = len(sessions)
+    if total_sessions > len(slots):
+        raise ValueError(f"Not enough time slots ({len(slots)}) for required sessions ({total_sessions}).")
+
+    # إحصاءات لكل قسم للمساعدة في التوازن
+    dept_total = defaultdict(int)
+    for s in sessions:
+        dept_total[s["department"]] += 1
+
+    # هدف صباح/مساء لكل قسم (تقريبياً)
+    dept_target_morning = {d: dept_total[d] // 2 for d in dept_total}
+
+    # تتبع الأيام المستخدمة لكل قسم (نطلب ألا يكون في نفس اليوم لشُعب مختلفة)
+    dept_used_days = defaultdict(set)
+    dept_assigned_morning = defaultdict(int)
+
+    # طابور جلسات (نرتب بحسب القسم الذي عنده نقص صباح/مساء)
+    sess_queue = deque(sessions)
+
+    schedule = []  # عناصر: slot + session info
+
+    for slot in slots:
+        if not sess_queue:
+            break
+        # نحاول إيجاد جلسة تناسب هذا الشريحة
+        chosen_idx = None
+        # افضّل جلسة من قسم لم يتم تخصيصه في هذا slot (يضمن عدم تداخل، نتحقق باليوم)
+        for idx, s in enumerate(sess_queue):
+            dept = s["department"]
+            # شرط: لا تكون هناك جلسة لنفس القسم في نفس الشريحة (نطبق عن طريق التأكد أن dept ليس في schedule لهذه الشريحة)
+            # لأن كل شريحة تستضيف جلسة واحدة فقط فشرط التداخل يعني أن نفس القسم لا يظهر في نفس slot مسبقاً — يتحقق تلقائياً
+            # شرط: نفس القسم لا يستخدم نفس اليوم مرتين
+            if slot["day"] in dept_used_days[dept]:
+                continue
+            # توازن صباح/مساء: نحاول ملء الصباح حسب الهدف
+            if slot["period"] == "morning":
+                # إذا القسم وصل لهدف الصباح فلا نختاره إن كان هناك بديل
+                if dept_assigned_morning[dept] >= dept_target_morning[dept]:
+                    # لكن إذا لا يوجد أي بديل نسمح باختياره لاحقاً
+                    pass
+            # نختار أول جلسة مناسبة
+            chosen_idx = idx
+            break
+
+        if chosen_idx is None:
+            # لا توجد جلسة تلبي قيد الأيام؛ نسمح بالتجاوز (اختيار أول متاح)
+            s = sess_queue.popleft()
+        else:
+            s = sess_queue[chosen_idx]
+            # ازالة العنصر من الطابور
+            del sess_queue[chosen_idx]
+
+        # سجل التعيين
+        s["assigned"] = True
+        schedule.append({
+            "day": slot["day"],
+            "slot_index": slot["slot_index"],
+            "period": slot["period"],
+            "start_time": slot.get("start_time"),
+            "end_time": slot.get("end_time"),
+            "room": slot.get("room"),
+            "department": s["department"],
+            "course": s["course"],
+            "group_id": s["group_id"]
+        })
+
+        # حدث إحصاءات القسم
+        dept_used_days[s["department"]].add(slot["day"])
+        if slot["period"] == "morning":
+            dept_assigned_morning[s["department"]] += 1
+
+    return schedule
+
+# --- حفظ المخرجات ---
+def save_schedule(schedule, path):
+    df = pd.DataFrame(schedule)
+    # تأكد الترتيب
+    df = df.sort_values(by=["day", "slot_index"])
+    if path.endswith(".xlsx"):
+        df.to_excel(path, index=False)
+    else:
+        df.to_csv(path, index=False)
+
+# --- تنفيذ ---
+if __name__ == "__main__":
+    timeslots_df, groups_df = read_input(INPUT_PATH)
+    slots = build_slots(timeslots_df)
+    sessions = expand_groups(groups_df)
+    sched = assign_sessions_to_slots(slots, sessions)
+    save_schedule(sched, OUTPUT_PATH)
+    print(f"Schedule saved to {OUTPUT_PATH}")
