@@ -245,7 +245,7 @@ function classifyRoom(roomName, roomNumber) {
   const name = clean(roomName).toUpperCase();
   const number = clean(roomNumber);
   if (!name && !number) return "بدون قاعة";
-  if (number === "1012530008") return "قاعة نظري";
+  if (number === "1012530008" || number === "1012530016") return "قاعة نظري";
   if (
     number === "1012520002" ||
     number === "1012520010" ||
