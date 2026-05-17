@@ -240,9 +240,15 @@ function classifyRoom(roomName, roomNumber) {
   if (!name && !number) return "بدون قاعة";
   if (name.endsWith("F2") || name.endsWith("F10")) return "تجميع الحاسب";
   if (name.endsWith("F3") || name.endsWith("F03") || name.endsWith("F11")) return "دوائر رقمية";
+  if (
+    name.includes("G") ||
+    name.endsWith("F8") ||
+    name.endsWith("F16") ||
+    name.endsWith("S8") ||
+    name.endsWith("S16")
+  ) return "نظري";
   if (name.includes("F")) return "معمل حاسب";
   if (name.includes("S")) return "قاعة تدريب";
-  if (name.includes("G")) return "قاعة عامة";
   return "غير مصنف";
 }
 
