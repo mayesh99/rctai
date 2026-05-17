@@ -220,6 +220,10 @@ function isVirtualRoom(row) {
   return clean(row.roomName).replace(/[هة]$/, "ه") === "قاعة افتراضيه";
 }
 
+function isSelfLearning(row) {
+  return clean(row.roomName).toLowerCase() === "self learning";
+}
+
 function prepareRows(data) {
   rows = data.map(item => {
     const t = parseTimeRange(item["الوقت"]);
@@ -249,7 +253,7 @@ function prepareRows(data) {
       roomName: clean(item["اسم القاعة"]),
       contactHours: clean(item["ساعات الاتصال"])
     };
-  }).filter(row => !isVirtualRoom(row)).sort((a, b) => {
+  }).filter(row => !isVirtualRoom(row) && !isSelfLearning(row)).sort((a, b) => {
     const da = DAYS_ORDER.indexOf(a.day), db = DAYS_ORDER.indexOf(b.day);
     return (da - db) || (a.startMin - b.startMin) || a.trainer.localeCompare(b.trainer, "ar");
   });
