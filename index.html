@@ -44,6 +44,7 @@
     .room-code { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #f1f5f9; color: #334155; font-weight: 700; }
     .muted-empty { color: #94a3b8; }
     .badge { display: inline-block; padding: 5px 9px; border-radius: 999px; font-size: 13px; font-weight: bold; }
+    .time-badge { direction: ltr; unicode-bidi: isolate; min-width: 105px; text-align: center; }
     .busy { background: #fee2e2; color: #991b1b; }
     .free { background: #dcfce7; color: #166534; }
     .period { background: #e0f2fe; color: #075985; }
@@ -413,7 +414,7 @@ function renderTrainerTable(data) {
     <tbody>${data.map(r => `
       <tr>
         <td>${escapeHtml(r.day)}</td>
-        <td><span class="badge period">${escapeHtml(r.timeLabel)}</span><div class="subtext">${escapeHtml(r.start)} إلى ${escapeHtml(r.end)}</div></td>
+        <td><span class="badge period time-badge">${escapeHtml(r.start)} - ${escapeHtml(r.end)}</span></td>
         <td class="main-cell"><strong>${escapeHtml(r.trainer)}</strong><div class="subtext">${escapeHtml(r.trainerId)}</div></td>
         <td class="course-cell"><span class="course-code">${escapeHtml(r.course)}</span><div>${escapeHtml(r.courseName)}</div></td>
         <td>${escapeHtml(r.lectureDesc)}</td>
@@ -435,7 +436,7 @@ function renderRoomTable(data) {
       <tr>
         <td><span class="badge ${r.status === "busy" ? "busy" : "free"}">${r.status === "busy" ? "مشغولة" : "متاحة"}</span></td>
         <td>${escapeHtml(r.day)}</td>
-        <td><span class="badge period">${escapeHtml(r.timeLabel || `${r.start} - ${r.end}`)}</span></td>
+        <td><span class="badge period time-badge">${escapeHtml(r.start)} - ${escapeHtml(r.end)}</span></td>
         <td>${escapeHtml(r.start)}</td>
         <td>${escapeHtml(r.end)}</td>
         <td>${escapeHtml(r.roomNumber)}</td>
