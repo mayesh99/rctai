@@ -234,6 +234,13 @@ function isSelfLearning(row) {
   return clean(row.roomName).toLowerCase() === "self learning";
 }
 
+const THEORY_ROOM_NUMBERS = new Set(["1012530008", "1012520008", "1012530016", "1012520016"]);
+
+function isTheoryRoomNumber(roomNumber) {
+  const number = clean(roomNumber);
+  return number.startsWith("101251") || THEORY_ROOM_NUMBERS.has(number);
+}
+
 function classifyRoom(roomName, roomNumber) {
   const name = clean(roomName).toUpperCase();
   const number = clean(roomNumber);
@@ -251,6 +258,7 @@ function classifyRoom(roomName, roomNumber) {
     name.endsWith("F03") ||
     name.endsWith("F11")
   ) return "دوائر رقمية";
+  if (isTheoryRoomNumber(number)) return "قاعات نظري";
   return "قاعات نظري";
 }
 
