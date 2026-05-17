@@ -175,13 +175,21 @@ function csvToObjects(text) {
 
 function parseTimeRange(value) {
   const text = clean(value);
-  if (!text.includes("-")) return { start: "", end: "", startMin: 0, endMin: 0, period: "" };
+  if (!text.includes("-")) return { start: "", end: "", startMin: 0, endMin: 0, period: "", slotKey: "", timeLabel: "" };
   const [left, right] = text.split("-").map(clean);
   const start = formatTime(right);
   const end = formatTime(left);
   const startMin = toMinutes(start);
   const endMin = toMinutes(end);
-  return { start, end, startMin, endMin, period: startMin < 12 * 60 ? "morning" : "evening" };
+  return {
+    start,
+    end,
+    startMin,
+    endMin,
+    period: startMin < 12 * 60 ? "morning" : "evening",
+    slotKey: `${startMin}-${endMin}`,
+    timeLabel: `${start} - ${end}`
+  };
 }
 
 function formatTime(v) {
@@ -213,6 +221,8 @@ function prepareRows(data) {
       startMin: t.startMin,
       endMin: t.endMin,
       period: t.period,
+      slotKey: t.slotKey,
+      timeLabel: t.timeLabel,
       lectures: clean(item["عدد المحاضرات"]),
       course: clean(item["المقرر"]),
       courseName: clean(item["وصف المقرر"]),
@@ -233,6 +243,27 @@ function uniqueValues(field) {
   return [...new Set(rows.map(r => r[field]).filter(Boolean))].sort((a,b) => a.localeCompare(b, "ar"));
 }
 
+function periodName(period) {
+  return period === "morning" ? "صباحية" : "مسائية";
+}
+
+function detailedPeriods() {
+  const byKey = new Map();
+  rows.forEach(r => {
+    if (!r.slotKey || byKey.has(r.slotKey)) return;
+    byKey.set(r.slotKey, {
+      key: r.slotKey,
+      label: `${r.timeLabel} (${periodName(r.period)})`,
+      start: r.start,
+      end: r.end,
+      startMin: r.startMin,
+      endMin: r.endMin,
+      period: r.period
+    });
+  });
+  return [...byKey.values()].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+}
+
 function fillSelect(select, values, allLabel) {
   select.innerHTML = `<option value="all">${allLabel}</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
 }
@@ -241,6 +272,13 @@ function populateFilters() {
   fillSelect(els.trainerFilter, uniqueValues("trainer"), "كل المدربين");
   fillSelect(els.dayFilter, DAYS_ORDER.filter(d => rows.some(r => r.day === d)), "كل الأيام");
   fillSelect(els.roomFilter, uniqueValues("roomNumber"), "كل القاعات");
+  els.periodFilter.innerHTML = `
+    <option value="all">كل الفترات</option>
+    <option value="morning">صباحية</option>
+    <option value="evening">مسائية</option>
+    <option disabled>-- الفترات التفصيلية --</option>
+    ${detailedPeriods().map(p => `<option value="slot:${escapeHtml(p.key)}">${escapeHtml(p.label)}</option>`).join("")}
+  `;
 }
 
 function getFilteredRows() {
@@ -248,11 +286,12 @@ function getFilteredRows() {
   const day = els.dayFilter.value;
   const period = els.periodFilter.value;
   const room = els.roomFilter.value;
+  const selectedSlot = period.startsWith("slot:") ? period.slice(5) : "";
 
   return rows.filter(r =>
     (trainer === "all" || r.trainer === trainer) &&
     (day === "all" || r.day === day) &&
-    (period === "all" || r.period === period) &&
+    (period === "all" || r.period === period || r.slotKey === selectedSlot) &&
     (room === "all" || r.roomNumber === room)
   );
 }
@@ -262,11 +301,45 @@ function getRoomRows(filtered) {
   const selectedPeriod = els.periodFilter.value;
   const selectedRoom = els.roomFilter.value;
   const selectedStatus = els.statusFilter.value;
+  const selectedSlotKey = selectedPeriod.startsWith("slot:") ? selectedPeriod.slice(5) : "";
+  const selectedSlot = detailedPeriods().find(p => p.key === selectedSlotKey);
 
   const rooms = uniqueValues("roomNumber")
     .filter(room => selectedRoom === "all" || room === selectedRoom);
 
   const days = selectedDay === "all" ? DAYS_ORDER.filter(d => rows.some(r => r.day === d)) : [selectedDay];
+
+  if (selectedSlot) {
+    const roomRows = [];
+    days.forEach(day => {
+      rooms.forEach(room => {
+        const bookings = rows.filter(r => r.day === day && r.slotKey === selectedSlot.key && r.roomNumber === room);
+        if (bookings.length) {
+          bookings.forEach(b => roomRows.push({ status: "busy", ...b }));
+        } else {
+          const sample = rows.find(r => r.roomNumber === room) || {};
+          roomRows.push({
+            status: "free",
+            day,
+            period: selectedSlot.period,
+            slotKey: selectedSlot.key,
+            timeLabel: selectedSlot.label,
+            roomNumber: room,
+            roomName: sample.roomName || "",
+            building: sample.building || "",
+            start: selectedSlot.start,
+            end: selectedSlot.end,
+            trainer: "",
+            course: "",
+            courseName: "",
+            lectureDesc: ""
+          });
+        }
+      });
+    });
+    return roomRows.filter(r => selectedStatus === "all" || r.status === selectedStatus);
+  }
+
   const periods = selectedPeriod === "all" ? ["morning", "evening"] : [selectedPeriod];
 
   const roomRows = [];
@@ -313,7 +386,7 @@ function renderTrainerTable(data) {
     <tbody>${data.map(r => `
       <tr>
         <td>${escapeHtml(r.day)}</td>
-        <td><span class="badge period">${r.period === "morning" ? "صباحية" : "مسائية"}</span></td>
+        <td><span class="badge period">${periodName(r.period)}</span></td>
         <td>${escapeHtml(r.start)}</td>
         <td>${escapeHtml(r.end)}</td>
         <td>${escapeHtml(r.trainer)}</td>
@@ -339,7 +412,7 @@ function renderRoomTable(data) {
       <tr>
         <td><span class="badge ${r.status === "busy" ? "busy" : "free"}">${r.status === "busy" ? "مشغولة" : "متاحة"}</span></td>
         <td>${escapeHtml(r.day)}</td>
-        <td><span class="badge period">${r.period === "morning" ? "صباحية" : "مسائية"}</span></td>
+        <td><span class="badge period">${periodName(r.period)}</span></td>
         <td>${escapeHtml(r.start)}</td>
         <td>${escapeHtml(r.end)}</td>
         <td>${escapeHtml(r.roomNumber)}</td>
