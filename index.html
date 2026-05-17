@@ -238,7 +238,12 @@ function classifyRoom(roomName, roomNumber) {
   const name = clean(roomName).toUpperCase();
   const number = clean(roomNumber);
   if (!name && !number) return "بدون قاعة";
-  if (name.endsWith("F2") || name.endsWith("F10")) return "تجميع الحاسب";
+  if (
+    number === "1012520002" ||
+    number === "1012520010" ||
+    name.endsWith("F2") ||
+    name.endsWith("F10")
+  ) return "تجميع الحاسب";
   if (name.endsWith("F3") || name.endsWith("F03") || name.endsWith("F11")) return "دوائر رقمية";
   return "قاعات نظري";
 }
