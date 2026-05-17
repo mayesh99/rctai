@@ -6,55 +6,55 @@
   <title>جداول المدربين والقاعات</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Tahoma, Arial, sans-serif; background: #f4f6f9; color: #172033; }
-    header { background: #1e293b; color: white; padding: 22px; text-align: center; }
+    body { margin: 0; font-family: Tahoma, Arial, sans-serif; background: #f3f8f5; color: #16332b; }
+    header { background: #006c45; color: white; padding: 22px; text-align: center; border-bottom: 5px solid #58b947; }
     header h1 { margin: 0 0 8px; font-size: 28px; }
-    header p { margin: 0; color: #cbd5e1; }
+    header p { margin: 0; color: #dcefe6; }
     main { max-width: 1400px; margin: 24px auto; padding: 0 16px 32px; }
-    .panel { background: white; border-radius: 18px; padding: 18px; box-shadow: 0 4px 14px rgba(15,23,42,.08); margin-bottom: 18px; }
+    .panel { background: white; border: 1px solid #d8e9df; border-radius: 18px; padding: 18px; box-shadow: 0 4px 14px rgba(0,74,49,.08); margin-bottom: 18px; }
     .tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-    .tab { border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; background: #e2e8f0; color: #0f172a; }
-    .tab.active { background: #2563eb; color: white; }
+    .tab { border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; background: #e4f1ea; color: #174435; }
+    .tab.active { background: #007a53; color: white; }
     .filters { display: grid; grid-template-columns: repeat(6, minmax(155px, 1fr)); gap: 14px; align-items: end; }
-    label { display: block; font-weight: bold; margin-bottom: 7px; color: #334155; }
-    select, input { width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: white; font-size: 15px; }
-    button.action { border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; background: #2563eb; color: white; }
-    button.secondary { background: #64748b; }
+    label { display: block; font-weight: bold; margin-bottom: 7px; color: #245243; }
+    select, input { width: 100%; padding: 11px 12px; border: 1px solid #bfd8ca; border-radius: 12px; background: white; font-size: 15px; color: #16332b; }
+    button.action { border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; background: #007a53; color: white; }
+    button.secondary { background: #4f7f69; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .stats { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 12px; margin-top: 14px; }
-    .stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; }
-    .stat .num { font-size: 24px; font-weight: bold; color: #1d4ed8; }
-    .stat .txt { color: #475569; margin-top: 4px; }
+    .stat { background: #f6fbf8; border: 1px solid #d8e9df; border-radius: 14px; padding: 14px; }
+    .stat .num { font-size: 24px; font-weight: bold; color: #007a53; }
+    .stat .txt { color: #4f6f61; margin-top: 4px; }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; background: white; min-width: 1000px; }
-    th, td { border-bottom: 1px solid #e2e8f0; padding: 11px 10px; text-align: right; vertical-align: top; white-space: nowrap; }
-    th { background: #f1f5f9; color: #0f172a; position: sticky; top: 0; z-index: 1; }
-    tr:hover td { background: #f8fafc; }
-    .schedule-table { border: 1px solid #e2e8f0; border-radius: 12px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
-    .schedule-table th { background: #eaf1fb; color: #172033; font-size: 13px; }
+    th, td { border-bottom: 1px solid #d8e9df; padding: 11px 10px; text-align: right; vertical-align: top; white-space: nowrap; }
+    th { background: #e9f5ef; color: #16332b; position: sticky; top: 0; z-index: 1; }
+    tr:hover td { background: #f6fbf8; }
+    .schedule-table { border: 1px solid #d8e9df; border-radius: 12px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
+    .schedule-table th { background: #dff0e7; color: #16332b; font-size: 13px; }
     .schedule-table th, .schedule-table td { padding: 12px 14px; }
-    .schedule-table tbody tr:nth-child(even) td { background: #fbfdff; }
-    .schedule-table tbody tr:hover td { background: #eef6ff; }
-    .schedule-table tbody tr.no-room-row td { background: #f8fafc; color: #94a3b8; opacity: .62; }
-    .schedule-table tbody tr.no-room-row:hover td { background: #f1f5f9; }
-    .schedule-table tbody tr.no-room-row .room-code { background: #e2e8f0; color: #94a3b8; border: 1px dashed #cbd5e1; }
+    .schedule-table tbody tr:nth-child(even) td { background: #fbfefc; }
+    .schedule-table tbody tr:hover td { background: #eef8f2; }
+    .schedule-table tbody tr.no-room-row td { background: #f8fbf9; color: #91a99d; opacity: .62; }
+    .schedule-table tbody tr.no-room-row:hover td { background: #edf5f0; }
+    .schedule-table tbody tr.no-room-row .room-code { background: #e4f1ea; color: #91a99d; border: 1px dashed #bfd8ca; }
     .schedule-table tbody tr.no-room-row .course-code,
     .schedule-table tbody tr.no-room-row .main-cell strong { color: #64748b; }
     .main-cell { min-width: 230px; white-space: normal; line-height: 1.55; }
-    .main-cell strong { display: block; color: #0f172a; font-size: 15px; }
-    .subtext { color: #64748b; font-size: 12px; margin-top: 3px; }
+    .main-cell strong { display: block; color: #16332b; font-size: 15px; }
+    .subtext { color: #5d766b; font-size: 12px; margin-top: 3px; }
     .course-cell { min-width: 240px; white-space: normal; line-height: 1.55; }
-    .course-code { display: inline-flex; color: #1d4ed8; font-weight: 700; margin-bottom: 3px; }
+    .course-code { display: inline-flex; color: #007a53; font-weight: 700; margin-bottom: 3px; }
     .room-cell { min-width: 120px; }
-    .room-code { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #f1f5f9; color: #334155; font-weight: 700; }
-    .muted-empty { color: #94a3b8; }
+    .room-code { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #e9f5ef; color: #245243; font-weight: 700; }
+    .muted-empty { color: #91a99d; }
     .badge { display: inline-block; padding: 5px 9px; border-radius: 999px; font-size: 13px; font-weight: bold; }
     .time-badge { direction: ltr; unicode-bidi: isolate; min-width: 105px; text-align: center; }
     .busy { background: #fee2e2; color: #991b1b; }
     .free { background: #dcfce7; color: #166534; }
-    .period { background: #e0f2fe; color: #075985; }
-    .empty { text-align: center; padding: 35px; color: #64748b; font-size: 18px; }
-    .note { color: #64748b; font-size: 14px; margin-top: 10px; line-height: 1.8; }
+    .period { background: #dff0e7; color: #006c45; }
+    .empty { text-align: center; padding: 35px; color: #5d766b; font-size: 18px; }
+    .note { color: #5d766b; font-size: 14px; margin-top: 10px; line-height: 1.8; }
     .hidden { display: none; }
     @media (max-width: 900px) { .filters, .stats { grid-template-columns: 1fr; } }
   </style>
@@ -136,7 +136,7 @@
 
 <script>
 const DAYS_ORDER = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
-const ROOM_CATEGORIES = ["قاعة نظري", "معمل", "دوائر رقمية", "تجميع الحاسب"];
+const ROOM_CATEGORIES = ["قاعة نظري", "معمل حاسب", "دوائر رقمية", "تجميع الحاسب"];
 let rows = [];
 let currentView = "trainers";
 
@@ -236,6 +236,10 @@ function isSelfLearning(row) {
 }
 
 const THEORY_ROOM_NUMBERS = new Set(["1012530008", "1012520008", "1012530016", "1012520016"]);
+const COMPUTER_LAB_ROOM_NUMBERS = new Set([
+  "1012520004", "1012520007", "1012520009", "1012520012", "1012520015", "1012520017",
+  "1012530002", "1012530004", "1012530007", "1012530009", "1012530012", "1012530015", "1012530017"
+]);
 
 function isTheoryRoom(roomName, roomNumber) {
   const name = clean(roomName).toUpperCase();
@@ -269,7 +273,12 @@ function classifyRoom(roomName, roomNumber) {
     name.endsWith("F11")
   ) return "دوائر رقمية";
   if (isTheoryRoom(name, number)) return "قاعة نظري";
-  return "معمل";
+  if (COMPUTER_LAB_ROOM_NUMBERS.has(number)) return "معمل حاسب";
+  if (number.startsWith("101252")) {
+    const labNumber = Number(number.slice(-4));
+    if (labNumber >= 4 && labNumber <= 17) return "معمل حاسب";
+  }
+  return "معمل حاسب";
 }
 
 function prepareRows(data) {
