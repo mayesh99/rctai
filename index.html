@@ -136,6 +136,7 @@
 
 <script>
 const DAYS_ORDER = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+const ROOM_CATEGORIES = ["قاعة نظري", "معمل", "دوائر رقمية", "تجميع الحاسب"];
 let rows = [];
 let currentView = "trainers";
 
@@ -236,16 +237,24 @@ function isSelfLearning(row) {
 
 const THEORY_ROOM_NUMBERS = new Set(["1012530008", "1012520008", "1012530016", "1012520016"]);
 
-function isTheoryRoomNumber(roomNumber) {
+function isTheoryRoom(roomName, roomNumber) {
+  const name = clean(roomName).toUpperCase();
   const number = clean(roomNumber);
-  return number.startsWith("101251") || THEORY_ROOM_NUMBERS.has(number);
+  return number.startsWith("101251") ||
+    THEORY_ROOM_NUMBERS.has(number) ||
+    name.includes("G") ||
+    name.endsWith("F8") ||
+    name.endsWith("F08") ||
+    name.endsWith("F16") ||
+    name.endsWith("S8") ||
+    name.endsWith("S08") ||
+    name.endsWith("S16");
 }
 
 function classifyRoom(roomName, roomNumber) {
   const name = clean(roomName).toUpperCase();
   const number = clean(roomNumber);
-  if (!name && !number) return "بدون قاعة";
-  if (number === "1012530008" || number === "1012530016") return "قاعة نظري";
+  if (!name && !number) return "";
   if (
     number === "1012520002" ||
     number === "1012520010" ||
@@ -259,8 +268,8 @@ function classifyRoom(roomName, roomNumber) {
     name.endsWith("F03") ||
     name.endsWith("F11")
   ) return "دوائر رقمية";
-  if (isTheoryRoomNumber(number)) return "قاعات نظري";
-  return "قاعات نظري";
+  if (isTheoryRoom(name, number)) return "قاعة نظري";
+  return "معمل";
 }
 
 function prepareRows(data) {
@@ -339,7 +348,7 @@ function populateFilters() {
   fillSelect(els.trainerFilter, uniqueValues("trainer"), "كل المدربين");
   fillSelect(els.dayFilter, DAYS_ORDER.filter(d => rows.some(r => r.day === d)), "كل الأيام");
   fillSelect(els.roomFilter, uniqueValues("roomNumber"), "كل القاعات");
-  fillSelect(els.roomCategoryFilter, uniqueValues("roomCategory"), "كل التصنيفات");
+  fillSelect(els.roomCategoryFilter, ROOM_CATEGORIES, "كل التصنيفات");
   els.periodFilter.innerHTML = `
     <option value="all">كل الفترات</option>
     ${approvedPeriods().map(p => `<option value="range:${escapeHtml(p.key)}">${escapeHtml(p.label)}</option>`).join("")}
