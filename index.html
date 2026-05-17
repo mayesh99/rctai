@@ -349,6 +349,10 @@ function isWithinRange(row, range) {
   return row.startMin >= range.startMin && row.endMin <= range.endMin;
 }
 
+function overlapsRange(row, range) {
+  return row.startMin < range.endMin && row.endMin > range.startMin;
+}
+
 function fillSelect(select, values, allLabel) {
   select.innerHTML = `<option value="all">${allLabel}</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
 }
@@ -409,7 +413,7 @@ function getRoomRows(filtered) {
     const roomRows = [];
     days.forEach(day => {
       rooms.forEach(room => {
-        const bookings = rows.filter(r => r.day === day && r.roomNumber === room && isWithinRange(r, selectedRange));
+        const bookings = rows.filter(r => r.day === day && r.roomNumber === room && overlapsRange(r, selectedRange));
         if (bookings.length) {
           bookings.forEach(b => roomRows.push({ status: "busy", ...b }));
         } else {
@@ -443,7 +447,7 @@ function getRoomRows(filtered) {
     days.forEach(day => {
       slots.forEach(slot => {
         rooms.forEach(room => {
-        const bookings = rows.filter(r => r.day === day && r.slotKey === slot.key && r.roomNumber === room);
+        const bookings = rows.filter(r => r.day === day && r.roomNumber === room && overlapsRange(r, slot));
         if (bookings.length) {
           bookings.forEach(b => roomRows.push({ status: "busy", ...b }));
         } else {
