@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>جداول المدربين والقاعات</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Tahoma, Arial, sans-serif; background: #f4f6f9; color: #172033; }
+    header { background: #1e293b; color: white; padding: 22px; text-align: center; }
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    header p { margin: 0; color: #cbd5e1; }
+    main { max-width: 1400px; margin: 24px auto; padding: 0 16px 32px; }
+    .panel { background: white; border-radius: 18px; padding: 18px; box-shadow: 0 4px 14px rgba(15,23,42,.08); margin-bottom: 18px; }
+    .tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .tab { border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; background: #e2e8f0; color: #0f172a; }
+    .tab.active { background: #2563eb; color: white; }
+    .filters { display: grid; grid-template-columns: repeat(5, minmax(170px, 1fr)); gap: 14px; align-items: end; }
+    label { display: block; font-weight: bold; margin-bottom: 7px; color: #334155; }
+    select, input { width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: white; font-size: 15px; }
+    button.action { border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; background: #2563eb; color: white; }
+    button.secondary { background: #64748b; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .stats { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 12px; margin-top: 14px; }
+    .stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; }
+    .stat .num { font-size: 24px; font-weight: bold; color: #1d4ed8; }
+    .stat .txt { color: #475569; margin-top: 4px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: white; min-width: 1000px; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 11px 10px; text-align: right; vertical-align: top; white-space: nowrap; }
+    th { background: #f1f5f9; color: #0f172a; position: sticky; top: 0; z-index: 1; }
+    tr:hover td { background: #f8fafc; }
+    .badge { display: inline-block; padding: 5px 9px; border-radius: 999px; font-size: 13px; font-weight: bold; }
+    .busy { background: #fee2e2; color: #991b1b; }
+    .free { background: #dcfce7; color: #166534; }
+    .period { background: #e0f2fe; color: #075985; }
+    .empty { text-align: center; padding: 35px; color: #64748b; font-size: 18px; }
+    .note { color: #64748b; font-size: 14px; margin-top: 10px; line-height: 1.8; }
+    .hidden { display: none; }
+    @media (max-width: 900px) { .filters, .stats { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>جداول المدربين والقاعات</h1>
+  <p>قراءة ملف SS07.csv مع فلترة المدربين والأيام والفترات، وعرض القاعات المتاحة والمشغولة</p>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="tabs">
+      <button class="tab active" id="trainerTab">جداول المدربين</button>
+      <button class="tab" id="roomTab">القاعات المتاحة والمشغولة</button>
+    </div>
+
+    <div class="filters">
+      <div>
+        <label for="trainerFilter">المدرب</label>
+        <select id="trainerFilter"><option value="all">كل المدربين</option></select>
+      </div>
+      <div>
+        <label for="dayFilter">اليوم</label>
+        <select id="dayFilter"><option value="all">كل الأيام</option></select>
+      </div>
+      <div>
+        <label for="periodFilter">الفترة</label>
+        <select id="periodFilter">
+          <option value="all">كل الفترات</option>
+          <option value="morning">صباحية</option>
+          <option value="evening">مسائية</option>
+        </select>
+      </div>
+      <div>
+        <label for="roomFilter">القاعة</label>
+        <select id="roomFilter"><option value="all">كل القاعات</option></select>
+      </div>
+      <div>
+        <label for="statusFilter">حالة القاعة</label>
+        <select id="statusFilter">
+          <option value="all">الكل</option>
+          <option value="busy">مشغولة</option>
+          <option value="free">متاحة</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions" style="margin-top:14px">
+      <button class="action" onclick="applyFilters()">تطبيق الفلترة</button>
+      <button class="action secondary" onclick="resetFilters()">إعادة ضبط</button>
+    </div>
+
+    <div class="note">
+      يتم تحميل ملف <b>SS07.csv</b> تلقائيًا من نفس مجلد الصفحة. إذا فتحت الصفحة محليًا ولم تظهر البيانات، شغّلها من GitHub Pages أو من خادم محلي بسيط.
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="sessionCount">0</div><div class="txt">عدد الحصص</div></div>
+      <div class="stat"><div class="num" id="trainerCount">0</div><div class="txt">عدد المدربين</div></div>
+      <div class="stat"><div class="num" id="roomCount">0</div><div class="txt">عدد القاعات</div></div>
+      <div class="stat"><div class="num" id="busyRoomCount">0</div><div class="txt">قاعات مشغولة</div></div>
+      <div class="stat"><div class="num" id="freeRoomCount">0</div><div class="txt">قاعات متاحة</div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="trainerPanel">
+    <h2>جدول المدربين</h2>
+    <div class="table-wrap"><table id="trainerTable"></table></div>
+  </section>
+
+  <section class="panel hidden" id="roomPanel">
+    <h2>القاعات المتاحة والمشغولة</h2>
+    <div class="table-wrap"><table id="roomTable"></table></div>
+  </section>
+</main>
+
+<script>
+const DAYS_ORDER = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+let rows = [];
+let currentView = "trainers";
+
+const els = {
+  trainerFilter: document.getElementById("trainerFilter"),
+  dayFilter: document.getElementById("dayFilter"),
+  periodFilter: document.getElementById("periodFilter"),
+  roomFilter: document.getElementById("roomFilter"),
+  statusFilter: document.getElementById("statusFilter"),
+  trainerTable: document.getElementById("trainerTable"),
+  roomTable: document.getElementById("roomTable"),
+  trainerPanel: document.getElementById("trainerPanel"),
+  roomPanel: document.getElementById("roomPanel"),
+  trainerTab: document.getElementById("trainerTab"),
+  roomTab: document.getElementById("roomTab"),
+  sessionCount: document.getElementById("sessionCount"),
+  trainerCount: document.getElementById("trainerCount"),
+  roomCount: document.getElementById("roomCount"),
+  busyRoomCount: document.getElementById("busyRoomCount"),
+  freeRoomCount: document.getElementById("freeRoomCount")
+};
+
+function clean(v) {
+  return (v ?? "").toString().trim().replace(/\u200f|\u200e/g, "");
+}
+
+function normalizeDay(v) {
+  const text = clean(v);
+  return DAYS_ORDER.find(d => text.includes(d)) || text;
+}
+
+function parseCSV(text) {
+  const out = [];
+  let row = [], cur = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], n = text[i + 1];
+    if (c === '"' && inQuotes && n === '"') { cur += '"'; i++; }
+    else if (c === '"') inQuotes = !inQuotes;
+    else if (c === ',' && !inQuotes) { row.push(cur); cur = ""; }
+    else if ((c === '\n' || c === '\r') && !inQuotes) {
+      if (cur.length || row.length) { row.push(cur); out.push(row); row = []; cur = ""; }
+      if (c === '\r' && n === '\n') i++;
+    } else cur += c;
+  }
+  if (cur.length || row.length) { row.push(cur); out.push(row); }
+  return out;
+}
+
+function csvToObjects(text) {
+  const parsed = parseCSV(text.replace(/^\uFEFF/, ""));
+  const headers = parsed.shift().map(clean);
+  return parsed.filter(r => r.length > 1).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = clean(r[i]));
+    return obj;
+  });
+}
+
+function parseTimeRange(value) {
+  const text = clean(value);
+  if (!text.includes("-")) return { start: "", end: "", startMin: 0, endMin: 0, period: "" };
+  const [left, right] = text.split("-").map(clean);
+  const start = formatTime(right);
+  const end = formatTime(left);
+  const startMin = toMinutes(start);
+  const endMin = toMinutes(end);
+  return { start, end, startMin, endMin, period: startMin < 12 * 60 ? "morning" : "evening" };
+}
+
+function formatTime(v) {
+  v = clean(v).replace(":", "").padStart(4, "0");
+  if (!v || v === "0000") return "";
+  return `${v.slice(0,2)}:${v.slice(2)}`;
+}
+
+function toMinutes(v) {
+  if (!v.includes(":")) return 0;
+  const [h, m] = v.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function prepareRows(data) {
+  rows = data.map(item => {
+    const t = parseTimeRange(item["الوقت"]);
+    return {
+      term: clean(item["الفصل التدريبي"]),
+      unit: clean(item["الوحدة التدريبية"]),
+      department: clean(item["القسم"]),
+      trainingType: clean(item["نوع التدريب"]),
+      trainerId: clean(item["رقم المدرب"]),
+      trainer: clean(item["اسم المدرب"]),
+      day: normalizeDay(item["اليوم"]),
+      rawTime: clean(item["الوقت"]),
+      start: t.start,
+      end: t.end,
+      startMin: t.startMin,
+      endMin: t.endMin,
+      period: t.period,
+      lectures: clean(item["عدد المحاضرات"]),
+      course: clean(item["المقرر"]),
+      courseName: clean(item["وصف المقرر"]),
+      lectureDesc: clean(item["وصف المحاضرة"]),
+      ref: clean(item["ر.مرجعي"]),
+      building: clean(item["المبنى"]),
+      roomNumber: clean(item["رقم القاعة"]),
+      roomName: clean(item["اسم القاعة"]),
+      contactHours: clean(item["ساعات الاتصال"])
+    };
+  }).sort((a, b) => {
+    const da = DAYS_ORDER.indexOf(a.day), db = DAYS_ORDER.indexOf(b.day);
+    return (da - db) || (a.startMin - b.startMin) || a.trainer.localeCompare(b.trainer, "ar");
+  });
+}
+
+function uniqueValues(field) {
+  return [...new Set(rows.map(r => r[field]).filter(Boolean))].sort((a,b) => a.localeCompare(b, "ar"));
+}
+
+function fillSelect(select, values, allLabel) {
+  select.innerHTML = `<option value="all">${allLabel}</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+}
+
+function populateFilters() {
+  fillSelect(els.trainerFilter, uniqueValues("trainer"), "كل المدربين");
+  fillSelect(els.dayFilter, DAYS_ORDER.filter(d => rows.some(r => r.day === d)), "كل الأيام");
+  fillSelect(els.roomFilter, uniqueValues("roomNumber"), "كل القاعات");
+}
+
+function getFilteredRows() {
+  const trainer = els.trainerFilter.value;
+  const day = els.dayFilter.value;
+  const period = els.periodFilter.value;
+  const room = els.roomFilter.value;
+
+  return rows.filter(r =>
+    (trainer === "all" || r.trainer === trainer) &&
+    (day === "all" || r.day === day) &&
+    (period === "all" || r.period === period) &&
+    (room === "all" || r.roomNumber === room)
+  );
+}
+
+function getRoomRows(filtered) {
+  const selectedDay = els.dayFilter.value;
+  const selectedPeriod = els.periodFilter.value;
+  const selectedRoom = els.roomFilter.value;
+  const selectedStatus = els.statusFilter.value;
+
+  const rooms = uniqueValues("roomNumber")
+    .filter(room => selectedRoom === "all" || room === selectedRoom);
+
+  const days = selectedDay === "all" ? DAYS_ORDER.filter(d => rows.some(r => r.day === d)) : [selectedDay];
+  const periods = selectedPeriod === "all" ? ["morning", "evening"] : [selectedPeriod];
+
+  const roomRows = [];
+
+  days.forEach(day => {
+    periods.forEach(period => {
+      rooms.forEach(room => {
+        const bookings = rows.filter(r => r.day === day && r.period === period && r.roomNumber === room);
+        if (bookings.length) {
+          bookings.forEach(b => roomRows.push({ status: "busy", ...b }));
+        } else {
+          const sample = rows.find(r => r.roomNumber === room) || {};
+          roomRows.push({
+            status: "free",
+            day,
+            period,
+            roomNumber: room,
+            roomName: sample.roomName || "",
+            building: sample.building || "",
+            start: "",
+            end: "",
+            trainer: "",
+            course: "",
+            courseName: "",
+            lectureDesc: ""
+          });
+        }
+      });
+    });
+  });
+
+  return roomRows.filter(r => selectedStatus === "all" || r.status === selectedStatus);
+}
+
+function renderTrainerTable(data) {
+  if (!data.length) {
+    els.trainerTable.innerHTML = `<tr><td class="empty">لا توجد نتائج مطابقة</td></tr>`;
+    return;
+  }
+  els.trainerTable.innerHTML = `
+    <thead><tr>
+      <th>اليوم</th><th>الفترة</th><th>من</th><th>إلى</th><th>المدرب</th><th>المقرر</th><th>وصف المقرر</th><th>نوع المحاضرة</th><th>القاعة</th><th>اسم القاعة</th><th>عدد المحاضرات</th>
+    </tr></thead>
+    <tbody>${data.map(r => `
+      <tr>
+        <td>${escapeHtml(r.day)}</td>
+        <td><span class="badge period">${r.period === "morning" ? "صباحية" : "مسائية"}</span></td>
+        <td>${escapeHtml(r.start)}</td>
+        <td>${escapeHtml(r.end)}</td>
+        <td>${escapeHtml(r.trainer)}</td>
+        <td>${escapeHtml(r.course)}</td>
+        <td>${escapeHtml(r.courseName)}</td>
+        <td>${escapeHtml(r.lectureDesc)}</td>
+        <td>${escapeHtml(r.roomNumber)}</td>
+        <td>${escapeHtml(r.roomName)}</td>
+        <td>${escapeHtml(r.lectures)}</td>
+      </tr>`).join("")}</tbody>`;
+}
+
+function renderRoomTable(data) {
+  if (!data.length) {
+    els.roomTable.innerHTML = `<tr><td class="empty">لا توجد نتائج مطابقة</td></tr>`;
+    return;
+  }
+  els.roomTable.innerHTML = `
+    <thead><tr>
+      <th>الحالة</th><th>اليوم</th><th>الفترة</th><th>من</th><th>إلى</th><th>رقم القاعة</th><th>اسم القاعة</th><th>المبنى</th><th>المدرب</th><th>المقرر</th><th>وصف المقرر</th><th>نوع المحاضرة</th>
+    </tr></thead>
+    <tbody>${data.map(r => `
+      <tr>
+        <td><span class="badge ${r.status === "busy" ? "busy" : "free"}">${r.status === "busy" ? "مشغولة" : "متاحة"}</span></td>
+        <td>${escapeHtml(r.day)}</td>
+        <td><span class="badge period">${r.period === "morning" ? "صباحية" : "مسائية"}</span></td>
+        <td>${escapeHtml(r.start)}</td>
+        <td>${escapeHtml(r.end)}</td>
+        <td>${escapeHtml(r.roomNumber)}</td>
+        <td>${escapeHtml(r.roomName)}</td>
+        <td>${escapeHtml(r.building)}</td>
+        <td>${escapeHtml(r.trainer)}</td>
+        <td>${escapeHtml(r.course)}</td>
+        <td>${escapeHtml(r.courseName)}</td>
+        <td>${escapeHtml(r.lectureDesc)}</td>
+      </tr>`).join("")}</tbody>`;
+}
+
+function updateStats(filtered, roomRows) {
+  els.sessionCount.textContent = filtered.length;
+  els.trainerCount.textContent = new Set(filtered.map(r => r.trainer).filter(Boolean)).size;
+  els.roomCount.textContent = new Set(rows.map(r => r.roomNumber).filter(Boolean)).size;
+  els.busyRoomCount.textContent = roomRows.filter(r => r.status === "busy").length;
+  els.freeRoomCount.textContent = roomRows.filter(r => r.status === "free").length;
+}
+
+function applyFilters() {
+  const filtered = getFilteredRows();
+  const roomRows = getRoomRows(filtered);
+  renderTrainerTable(filtered);
+  renderRoomTable(roomRows);
+  updateStats(filtered, roomRows);
+}
+
+function resetFilters() {
+  els.trainerFilter.value = "all";
+  els.dayFilter.value = "all";
+  els.periodFilter.value = "all";
+  els.roomFilter.value = "all";
+  els.statusFilter.value = "all";
+  applyFilters();
+}
+
+function switchView(view) {
+  currentView = view;
+  els.trainerPanel.classList.toggle("hidden", view !== "trainers");
+  els.roomPanel.classList.toggle("hidden", view !== "rooms");
+  els.trainerTab.classList.toggle("active", view === "trainers");
+  els.roomTab.classList.toggle("active", view === "rooms");
+}
+
+function escapeHtml(v) {
+  return clean(v).replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[ch]));
+}
+
+els.trainerTab.addEventListener("click", () => switchView("trainers"));
+els.roomTab.addEventListener("click", () => switchView("rooms"));
+[els.trainerFilter, els.dayFilter, els.periodFilter, els.roomFilter, els.statusFilter].forEach(el => el.addEventListener("change", applyFilters));
+
+fetch("SS07.csv")
+  .then(res => {
+    if (!res.ok) throw new Error("لم أستطع قراءة SS07.csv");
+    return res.text();
+  })
+  .then(text => {
+    prepareRows(csvToObjects(text));
+    populateFilters();
+    applyFilters();
+  })
+  .catch(err => {
+    els.trainerTable.innerHTML = `<tr><td class="empty">${escapeHtml(err.message)}</td></tr>`;
+    els.roomTable.innerHTML = `<tr><td class="empty">${escapeHtml(err.message)}</td></tr>`;
+  });
+</script>
+</body>
+</html>
