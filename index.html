@@ -17,10 +17,10 @@
     .tab.active { background: #2563eb; color: white; }
     .filters { display: grid; grid-template-columns: repeat(5, minmax(170px, 1fr)); gap: 14px; align-items: end; }
     label { display: block; font-weight: bold; margin-bottom: 7px; color: #334155; }
-    select { width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: white; font-size: 15px; }
+    select, input { width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: white; font-size: 15px; }
     button.action { border: 0; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; background: #2563eb; color: white; }
     button.secondary { background: #64748b; }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .stats { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 12px; margin-top: 14px; }
     .stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; }
     .stat .num { font-size: 24px; font-weight: bold; color: #1d4ed8; }
@@ -54,10 +54,24 @@
     </div>
 
     <div class="filters">
-      <div><label for="trainerFilter">المدرب</label><select id="trainerFilter"><option value="all">كل المدربين</option></select></div>
-      <div><label for="dayFilter">اليوم</label><select id="dayFilter"><option value="all">كل الأيام</option></select></div>
-      <div><label for="periodFilter">الفترة</label><select id="periodFilter"><option value="all">كل الفترات</option></select></div>
-      <div><label for="roomFilter">القاعة</label><select id="roomFilter"><option value="all">كل القاعات</option></select></div>
+      <div>
+        <label for="trainerFilter">المدرب</label>
+        <select id="trainerFilter"><option value="all">كل المدربين</option></select>
+      </div>
+      <div>
+        <label for="dayFilter">اليوم</label>
+        <select id="dayFilter"><option value="all">كل الأيام</option></select>
+      </div>
+      <div>
+        <label for="periodFilter">الفترة</label>
+        <select id="periodFilter">
+          <option value="all">كل الفترات</option>
+        </select>
+      </div>
+      <div>
+        <label for="roomFilter">القاعة</label>
+        <select id="roomFilter"><option value="all">كل القاعات</option></select>
+      </div>
       <div>
         <label for="statusFilter">حالة القاعة</label>
         <select id="statusFilter">
@@ -68,12 +82,14 @@
       </div>
     </div>
 
-    <div class="actions">
+    <div class="actions" style="margin-top:14px">
       <button class="action" onclick="applyFilters()">تطبيق الفلترة</button>
       <button class="action secondary" onclick="resetFilters()">إعادة ضبط</button>
     </div>
 
-    <div class="note">يتم تحميل ملف <b>SS07.csv</b> تلقائيًا من نفس مجلد الصفحة. يتم حذف صفوف القاعة الافتراضية من العرض والإحصائيات.</div>
+    <div class="note">
+      يتم تحميل ملف <b>SS07.csv</b> تلقائيًا من نفس مجلد الصفحة. إذا فتحت الصفحة محليًا ولم تظهر البيانات، شغّلها من GitHub Pages أو من خادم محلي بسيط.
+    </div>
 
     <div class="stats">
       <div class="stat"><div class="num" id="sessionCount">0</div><div class="txt">عدد الحصص</div></div>
@@ -98,6 +114,7 @@
 <script>
 const DAYS_ORDER = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
 let rows = [];
+let currentView = "trainers";
 
 const els = {
   trainerFilter: document.getElementById("trainerFilter"),
@@ -118,11 +135,14 @@ const els = {
   freeRoomCount: document.getElementById("freeRoomCount")
 };
 
-function clean(v) { return (v ?? "").toString().trim().replace(/\u200f|\u200e/g, ""); }
-function normalizeDay(v) { const text = clean(v); return DAYS_ORDER.find(d => text.includes(d)) || text; }
-function periodName(period) { return period === "morning" ? "صباحية" : "مسائية"; }
-function isVirtualRoom(row) { return clean(row.roomName).replace(/[هة]$/, "ه") === "قاعة افتراضيه"; }
-function escapeHtml(v) { return clean(v).replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[ch])); }
+function clean(v) {
+  return (v ?? "").toString().trim().replace(/\u200f|\u200e/g, "");
+}
+
+function normalizeDay(v) {
+  const text = clean(v);
+  return DAYS_ORDER.find(d => text.includes(d)) || text;
+}
 
 function parseCSV(text) {
   const out = [];
@@ -151,6 +171,25 @@ function csvToObjects(text) {
   });
 }
 
+function parseTimeRange(value) {
+  const text = clean(value);
+  if (!text.includes("-")) return { start: "", end: "", startMin: 0, endMin: 0, period: "", slotKey: "", timeLabel: "" };
+  const [left, right] = text.split("-").map(clean);
+  const start = formatTime(right);
+  const end = formatTime(left);
+  const startMin = toMinutes(start);
+  const endMin = toMinutes(end);
+  return {
+    start,
+    end,
+    startMin,
+    endMin,
+    period: startMin < 12 * 60 ? "morning" : "evening",
+    slotKey: `${startMin}-${endMin}`,
+    timeLabel: `${start} - ${end}`
+  };
+}
+
 function formatTime(v) {
   v = clean(v).replace(":", "").padStart(4, "0");
   if (!v || v === "0000") return "";
@@ -163,28 +202,38 @@ function toMinutes(v) {
   return h * 60 + m;
 }
 
-function parseTimeRange(value) {
-  const text = clean(value);
-  if (!text.includes("-")) return { start: "", end: "", startMin: 0, endMin: 0, period: "", slotKey: "", timeLabel: "" };
-  const [left, right] = text.split("-").map(clean);
-  const start = formatTime(right);
-  const end = formatTime(left);
-  const startMin = toMinutes(start);
-  const endMin = toMinutes(end);
-  return { start, end, startMin, endMin, period: startMin < 12 * 60 ? "morning" : "evening", slotKey: `${startMin}-${endMin}`, timeLabel: `${start} - ${end}` };
+function isVirtualRoom(row) {
+  return clean(row.roomName).replace(/[هة]$/, "ه") === "قاعة افتراضيه";
 }
 
 function prepareRows(data) {
   rows = data.map(item => {
     const t = parseTimeRange(item["الوقت"]);
     return {
-      term: clean(item["الفصل التدريبي"]), unit: clean(item["الوحدة التدريبية"]), department: clean(item["القسم"]),
-      trainingType: clean(item["نوع التدريب"]), trainerId: clean(item["رقم المدرب"]), trainer: clean(item["اسم المدرب"]),
-      day: normalizeDay(item["اليوم"]), rawTime: clean(item["الوقت"]), start: t.start, end: t.end,
-      startMin: t.startMin, endMin: t.endMin, period: t.period, slotKey: t.slotKey, timeLabel: t.timeLabel,
-      lectures: clean(item["عدد المحاضرات"]), course: clean(item["المقرر"]), courseName: clean(item["وصف المقرر"]),
-      lectureDesc: clean(item["وصف المحاضرة"]), ref: clean(item["ر.مرجعي"]), building: clean(item["المبنى"]),
-      roomNumber: clean(item["رقم القاعة"]), roomName: clean(item["اسم القاعة"]), contactHours: clean(item["ساعات الاتصال"])
+      term: clean(item["الفصل التدريبي"]),
+      unit: clean(item["الوحدة التدريبية"]),
+      department: clean(item["القسم"]),
+      trainingType: clean(item["نوع التدريب"]),
+      trainerId: clean(item["رقم المدرب"]),
+      trainer: clean(item["اسم المدرب"]),
+      day: normalizeDay(item["اليوم"]),
+      rawTime: clean(item["الوقت"]),
+      start: t.start,
+      end: t.end,
+      startMin: t.startMin,
+      endMin: t.endMin,
+      period: t.period,
+      slotKey: t.slotKey,
+      timeLabel: t.timeLabel,
+      lectures: clean(item["عدد المحاضرات"]),
+      course: clean(item["المقرر"]),
+      courseName: clean(item["وصف المقرر"]),
+      lectureDesc: clean(item["وصف المحاضرة"]),
+      ref: clean(item["ر.مرجعي"]),
+      building: clean(item["المبنى"]),
+      roomNumber: clean(item["رقم القاعة"]),
+      roomName: clean(item["اسم القاعة"]),
+      contactHours: clean(item["ساعات الاتصال"])
     };
   }).filter(row => !isVirtualRoom(row)).sort((a, b) => {
     const da = DAYS_ORDER.indexOf(a.day), db = DAYS_ORDER.indexOf(b.day);
@@ -192,13 +241,23 @@ function prepareRows(data) {
   });
 }
 
-function uniqueValues(field) { return [...new Set(rows.map(r => r[field]).filter(Boolean))].sort((a,b) => a.localeCompare(b, "ar")); }
+function uniqueValues(field) {
+  return [...new Set(rows.map(r => r[field]).filter(Boolean))].sort((a,b) => a.localeCompare(b, "ar"));
+}
 
 function detailedPeriods() {
   const byKey = new Map();
   rows.forEach(r => {
     if (!r.slotKey || byKey.has(r.slotKey)) return;
-    byKey.set(r.slotKey, { key: r.slotKey, label: `${r.timeLabel} (${periodName(r.period)})`, start: r.start, end: r.end, startMin: r.startMin, endMin: r.endMin, period: r.period });
+    byKey.set(r.slotKey, {
+      key: r.slotKey,
+      label: r.timeLabel,
+      start: r.start,
+      end: r.end,
+      startMin: r.startMin,
+      endMin: r.endMin,
+      period: r.period
+    });
   });
   return [...byKey.values()].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
 }
@@ -213,9 +272,6 @@ function populateFilters() {
   fillSelect(els.roomFilter, uniqueValues("roomNumber"), "كل القاعات");
   els.periodFilter.innerHTML = `
     <option value="all">كل الفترات</option>
-    <option value="morning">صباحية</option>
-    <option value="evening">مسائية</option>
-    <option disabled>-- الفترات التفصيلية --</option>
     ${detailedPeriods().map(p => `<option value="slot:${escapeHtml(p.key)}">${escapeHtml(p.label)}</option>`).join("")}
   `;
 }
@@ -226,51 +282,113 @@ function getFilteredRows() {
   const period = els.periodFilter.value;
   const room = els.roomFilter.value;
   const selectedSlot = period.startsWith("slot:") ? period.slice(5) : "";
-  return rows.filter(r => (trainer === "all" || r.trainer === trainer) && (day === "all" || r.day === day) && (period === "all" || r.period === period || r.slotKey === selectedSlot) && (room === "all" || r.roomNumber === room));
+
+  return rows.filter(r =>
+    (trainer === "all" || r.trainer === trainer) &&
+    (day === "all" || r.day === day) &&
+    (period === "all" || r.slotKey === selectedSlot) &&
+    (room === "all" || r.roomNumber === room)
+  );
 }
 
-function getRoomRows() {
+function getRoomRows(filtered) {
   const selectedDay = els.dayFilter.value;
   const selectedPeriod = els.periodFilter.value;
   const selectedRoom = els.roomFilter.value;
   const selectedStatus = els.statusFilter.value;
   const selectedSlotKey = selectedPeriod.startsWith("slot:") ? selectedPeriod.slice(5) : "";
   const selectedSlot = detailedPeriods().find(p => p.key === selectedSlotKey);
-  const rooms = uniqueValues("roomNumber").filter(room => selectedRoom === "all" || room === selectedRoom);
-  const days = selectedDay === "all" ? DAYS_ORDER.filter(d => rows.some(r => r.day === d)) : [selectedDay];
-  const roomRows = [];
 
-  if (selectedSlot) {
-    days.forEach(day => rooms.forEach(room => {
-      const bookings = rows.filter(r => r.day === day && r.slotKey === selectedSlot.key && r.roomNumber === room);
-      if (bookings.length) bookings.forEach(b => roomRows.push({ status: "busy", ...b }));
-      else {
-        const sample = rows.find(r => r.roomNumber === room) || {};
-        roomRows.push({ status: "free", day, period: selectedSlot.period, roomNumber: room, roomName: sample.roomName || "", building: sample.building || "", start: selectedSlot.start, end: selectedSlot.end, trainer: "", course: "", courseName: "", lectureDesc: "" });
-      }
-    }));
-  } else {
-    const periods = selectedPeriod === "all" ? ["morning", "evening"] : [selectedPeriod];
-    days.forEach(day => periods.forEach(period => rooms.forEach(room => {
-      const bookings = rows.filter(r => r.day === day && r.period === period && r.roomNumber === room);
-      if (bookings.length) bookings.forEach(b => roomRows.push({ status: "busy", ...b }));
-      else {
-        const sample = rows.find(r => r.roomNumber === room) || {};
-        roomRows.push({ status: "free", day, period, roomNumber: room, roomName: sample.roomName || "", building: sample.building || "", start: "", end: "", trainer: "", course: "", courseName: "", lectureDesc: "" });
-      }
-    })));
+  const rooms = uniqueValues("roomNumber")
+    .filter(room => selectedRoom === "all" || room === selectedRoom);
+
+  const days = selectedDay === "all" ? DAYS_ORDER.filter(d => rows.some(r => r.day === d)) : [selectedDay];
+
+  const slots = selectedSlot ? [selectedSlot] : detailedPeriods();
+  if (slots.length) {
+    const roomRows = [];
+    days.forEach(day => {
+      slots.forEach(slot => {
+        rooms.forEach(room => {
+        const bookings = rows.filter(r => r.day === day && r.slotKey === slot.key && r.roomNumber === room);
+        if (bookings.length) {
+          bookings.forEach(b => roomRows.push({ status: "busy", ...b }));
+        } else {
+          const sample = rows.find(r => r.roomNumber === room) || {};
+          roomRows.push({
+            status: "free",
+            day,
+            period: slot.period,
+            slotKey: slot.key,
+            timeLabel: slot.label,
+            roomNumber: room,
+            roomName: sample.roomName || "",
+            building: sample.building || "",
+            start: slot.start,
+            end: slot.end,
+            trainer: "",
+            course: "",
+            courseName: "",
+            lectureDesc: ""
+          });
+        }
+      });
+      });
+    });
+    return roomRows.filter(r => selectedStatus === "all" || r.status === selectedStatus);
   }
-  return roomRows.filter(r => selectedStatus === "all" || r.status === selectedStatus);
+  return [];
 }
 
 function renderTrainerTable(data) {
-  if (!data.length) { els.trainerTable.innerHTML = `<tr><td class="empty">لا توجد نتائج مطابقة</td></tr>`; return; }
-  els.trainerTable.innerHTML = `<thead><tr><th>اليوم</th><th>الفترة</th><th>من</th><th>إلى</th><th>المدرب</th><th>المقرر</th><th>وصف المقرر</th><th>نوع المحاضرة</th><th>القاعة</th><th>اسم القاعة</th><th>عدد المحاضرات</th></tr></thead><tbody>${data.map(r => `<tr><td>${escapeHtml(r.day)}</td><td><span class="badge period">${periodName(r.period)}</span></td><td>${escapeHtml(r.start)}</td><td>${escapeHtml(r.end)}</td><td>${escapeHtml(r.trainer)}</td><td>${escapeHtml(r.course)}</td><td>${escapeHtml(r.courseName)}</td><td>${escapeHtml(r.lectureDesc)}</td><td>${escapeHtml(r.roomNumber)}</td><td>${escapeHtml(r.roomName)}</td><td>${escapeHtml(r.lectures)}</td></tr>`).join("")}</tbody>`;
+  if (!data.length) {
+    els.trainerTable.innerHTML = `<tr><td class="empty">لا توجد نتائج مطابقة</td></tr>`;
+    return;
+  }
+  els.trainerTable.innerHTML = `
+    <thead><tr>
+      <th>اليوم</th><th>الفترة</th><th>من</th><th>إلى</th><th>المدرب</th><th>المقرر</th><th>وصف المقرر</th><th>نوع المحاضرة</th><th>القاعة</th><th>اسم القاعة</th><th>عدد المحاضرات</th>
+    </tr></thead>
+    <tbody>${data.map(r => `
+      <tr>
+        <td>${escapeHtml(r.day)}</td>
+        <td><span class="badge period">${escapeHtml(r.timeLabel)}</span></td>
+        <td>${escapeHtml(r.start)}</td>
+        <td>${escapeHtml(r.end)}</td>
+        <td>${escapeHtml(r.trainer)}</td>
+        <td>${escapeHtml(r.course)}</td>
+        <td>${escapeHtml(r.courseName)}</td>
+        <td>${escapeHtml(r.lectureDesc)}</td>
+        <td>${escapeHtml(r.roomNumber)}</td>
+        <td>${escapeHtml(r.roomName)}</td>
+        <td>${escapeHtml(r.lectures)}</td>
+      </tr>`).join("")}</tbody>`;
 }
 
 function renderRoomTable(data) {
-  if (!data.length) { els.roomTable.innerHTML = `<tr><td class="empty">لا توجد نتائج مطابقة</td></tr>`; return; }
-  els.roomTable.innerHTML = `<thead><tr><th>الحالة</th><th>اليوم</th><th>الفترة</th><th>من</th><th>إلى</th><th>رقم القاعة</th><th>اسم القاعة</th><th>المبنى</th><th>المدرب</th><th>المقرر</th><th>وصف المقرر</th><th>نوع المحاضرة</th></tr></thead><tbody>${data.map(r => `<tr><td><span class="badge ${r.status === "busy" ? "busy" : "free"}">${r.status === "busy" ? "مشغولة" : "متاحة"}</span></td><td>${escapeHtml(r.day)}</td><td><span class="badge period">${periodName(r.period)}</span></td><td>${escapeHtml(r.start)}</td><td>${escapeHtml(r.end)}</td><td>${escapeHtml(r.roomNumber)}</td><td>${escapeHtml(r.roomName)}</td><td>${escapeHtml(r.building)}</td><td>${escapeHtml(r.trainer)}</td><td>${escapeHtml(r.course)}</td><td>${escapeHtml(r.courseName)}</td><td>${escapeHtml(r.lectureDesc)}</td></tr>`).join("")}</tbody>`;
+  if (!data.length) {
+    els.roomTable.innerHTML = `<tr><td class="empty">لا توجد نتائج مطابقة</td></tr>`;
+    return;
+  }
+  els.roomTable.innerHTML = `
+    <thead><tr>
+      <th>الحالة</th><th>اليوم</th><th>الفترة</th><th>من</th><th>إلى</th><th>رقم القاعة</th><th>اسم القاعة</th><th>المبنى</th><th>المدرب</th><th>المقرر</th><th>وصف المقرر</th><th>نوع المحاضرة</th>
+    </tr></thead>
+    <tbody>${data.map(r => `
+      <tr>
+        <td><span class="badge ${r.status === "busy" ? "busy" : "free"}">${r.status === "busy" ? "مشغولة" : "متاحة"}</span></td>
+        <td>${escapeHtml(r.day)}</td>
+        <td><span class="badge period">${escapeHtml(r.timeLabel || `${r.start} - ${r.end}`)}</span></td>
+        <td>${escapeHtml(r.start)}</td>
+        <td>${escapeHtml(r.end)}</td>
+        <td>${escapeHtml(r.roomNumber)}</td>
+        <td>${escapeHtml(r.roomName)}</td>
+        <td>${escapeHtml(r.building)}</td>
+        <td>${escapeHtml(r.trainer)}</td>
+        <td>${escapeHtml(r.course)}</td>
+        <td>${escapeHtml(r.courseName)}</td>
+        <td>${escapeHtml(r.lectureDesc)}</td>
+      </tr>`).join("")}</tbody>`;
 }
 
 function updateStats(filtered, roomRows) {
@@ -283,7 +401,7 @@ function updateStats(filtered, roomRows) {
 
 function applyFilters() {
   const filtered = getFilteredRows();
-  const roomRows = getRoomRows();
+  const roomRows = getRoomRows(filtered);
   renderTrainerTable(filtered);
   renderRoomTable(roomRows);
   updateStats(filtered, roomRows);
@@ -299,10 +417,15 @@ function resetFilters() {
 }
 
 function switchView(view) {
+  currentView = view;
   els.trainerPanel.classList.toggle("hidden", view !== "trainers");
   els.roomPanel.classList.toggle("hidden", view !== "rooms");
   els.trainerTab.classList.toggle("active", view === "trainers");
   els.roomTab.classList.toggle("active", view === "rooms");
+}
+
+function escapeHtml(v) {
+  return clean(v).replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[ch]));
 }
 
 els.trainerTab.addEventListener("click", () => switchView("trainers"));
@@ -310,8 +433,15 @@ els.roomTab.addEventListener("click", () => switchView("rooms"));
 [els.trainerFilter, els.dayFilter, els.periodFilter, els.roomFilter, els.statusFilter].forEach(el => el.addEventListener("change", applyFilters));
 
 fetch("SS07.csv")
-  .then(res => { if (!res.ok) throw new Error("لم أستطع قراءة SS07.csv"); return res.text(); })
-  .then(text => { prepareRows(csvToObjects(text)); populateFilters(); applyFilters(); })
+  .then(res => {
+    if (!res.ok) throw new Error("لم أستطع قراءة SS07.csv");
+    return res.text();
+  })
+  .then(text => {
+    prepareRows(csvToObjects(text));
+    populateFilters();
+    applyFilters();
+  })
   .catch(err => {
     els.trainerTable.innerHTML = `<tr><td class="empty">${escapeHtml(err.message)}</td></tr>`;
     els.roomTable.innerHTML = `<tr><td class="empty">${escapeHtml(err.message)}</td></tr>`;
