@@ -238,6 +238,7 @@ function classifyRoom(roomName, roomNumber) {
   const name = clean(roomName).toUpperCase();
   const number = clean(roomNumber);
   if (!name && !number) return "بدون قاعة";
+  if (name.endsWith("F2") || name.endsWith("F10")) return "تجميع الحاسب";
   if (name.includes("F")) return "معمل حاسب";
   if (name.includes("S")) return "قاعة تدريب";
   if (name.includes("G")) return "قاعة عامة";
