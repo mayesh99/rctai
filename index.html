@@ -136,7 +136,7 @@
 
 <script>
 const DAYS_ORDER = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
-const ROOM_CATEGORIES = ["قاعة نظري", "معمل حاسب", "دوائر رقمية", "تجميع الحاسب"];
+const ROOM_CATEGORIES = ["قاعة نظري", "قاعة معمل حاسب", "دوائر رقمية", "تجميع الحاسب"];
 let rows = [];
 let currentView = "trainers";
 
@@ -273,12 +273,12 @@ function classifyRoom(roomName, roomNumber) {
     name.endsWith("F11")
   ) return "دوائر رقمية";
   if (isTheoryRoom(name, number)) return "قاعة نظري";
-  if (COMPUTER_LAB_ROOM_NUMBERS.has(number)) return "معمل حاسب";
+  if (COMPUTER_LAB_ROOM_NUMBERS.has(number)) return "قاعة معمل حاسب";
   if (number.startsWith("101252")) {
     const labNumber = Number(number.slice(-4));
-    if (labNumber >= 4 && labNumber <= 17) return "معمل حاسب";
+    if (labNumber >= 4 && labNumber <= 17) return "قاعة معمل حاسب";
   }
-  return "معمل حاسب";
+  return "قاعة معمل حاسب";
 }
 
 function prepareRows(data) {
