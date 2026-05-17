@@ -48,6 +48,8 @@
     .room-cell { min-width: 120px; }
     .room-code { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #e9f5ef; color: #245243; font-weight: 700; }
     .muted-empty { color: #91a99d; }
+    .info-btn { width: 34px; height: 34px; border: 0; border-radius: 50%; cursor: pointer; background: #dff0e7; color: #006c45; font-weight: 800; font-size: 17px; line-height: 1; }
+    .info-btn:hover { background: #c7e7d6; }
     .badge { display: inline-block; padding: 5px 9px; border-radius: 999px; font-size: 13px; font-weight: bold; }
     .time-badge { direction: ltr; unicode-bidi: isolate; min-width: 105px; text-align: center; }
     .busy { background: #fee2e2; color: #991b1b; }
@@ -56,8 +58,21 @@
     .empty { text-align: center; padding: 35px; color: #5d766b; font-size: 18px; }
     .note { color: #5d766b; font-size: 14px; margin-top: 10px; line-height: 1.8; }
     .hidden { display: none; }
+    .modal { position: fixed; inset: 0; background: rgba(10,39,30,.42); display: flex; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
+    .modal.hidden { display: none; }
+    .modal-card { width: min(720px, 100%); max-height: 82vh; overflow: auto; background: white; border-radius: 18px; border: 1px solid #d8e9df; box-shadow: 0 18px 48px rgba(0,74,49,.22); }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid #d8e9df; background: #f6fbf8; }
+    .modal-head h3 { margin: 0; color: #16332b; font-size: 19px; }
+    .close-btn { border: 0; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; background: #e4f1ea; color: #174435; font-size: 20px; line-height: 1; }
+    .modal-body { padding: 18px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; }
+    .detail-item { border: 1px solid #d8e9df; border-radius: 12px; padding: 11px; background: #fbfefc; white-space: normal; }
+    .detail-item .key { color: #5d766b; font-size: 12px; margin-bottom: 5px; }
+    .detail-item .value { color: #16332b; font-weight: 700; overflow-wrap: anywhere; }
     @media (max-width: 900px) { .filters, .stats { grid-template-columns: 1fr; } }
+    @media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <header>
@@ -134,10 +149,22 @@
   </section>
 </main>
 
+<div class="modal hidden" id="trainerInfoModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="trainerInfoTitle">بيانات المدرب</h3>
+      <button class="close-btn" id="trainerInfoClose" type="button" aria-label="إغلاق">×</button>
+    </div>
+    <div class="modal-body" id="trainerInfoBody"></div>
+  </div>
+</div>
+
 <script>
 const DAYS_ORDER = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
 const ROOM_CATEGORIES = ["قاعة نظري", "قاعة معمل حاسب", "دوائر رقمية", "تجميع الحاسب"];
 let rows = [];
+let trainerInfoRows = [];
+let trainerInfoLoadPromise = null;
 let currentView = "trainers";
 
 const els = {
@@ -151,6 +178,10 @@ const els = {
   roomTable: document.getElementById("roomTable"),
   trainerPanel: document.getElementById("trainerPanel"),
   roomPanel: document.getElementById("roomPanel"),
+  trainerInfoModal: document.getElementById("trainerInfoModal"),
+  trainerInfoTitle: document.getElementById("trainerInfoTitle"),
+  trainerInfoBody: document.getElementById("trainerInfoBody"),
+  trainerInfoClose: document.getElementById("trainerInfoClose"),
   trainerTab: document.getElementById("trainerTab"),
   roomTab: document.getElementById("roomTab"),
   sessionCount: document.getElementById("sessionCount"),
@@ -315,6 +346,74 @@ function prepareRows(data) {
     const da = DAYS_ORDER.indexOf(a.day), db = DAYS_ORDER.indexOf(b.day);
     return (da - db) || (a.startMin - b.startMin) || a.trainer.localeCompare(b.trainer, "ar");
   });
+}
+
+async function loadTrainerInfo() {
+  if (trainerInfoRows.length) return trainerInfoRows;
+  if (trainerInfoLoadPromise) return trainerInfoLoadPromise;
+  trainerInfoLoadPromise = (async () => {
+    if (typeof XLSX === "undefined") throw new Error("تعذر تحميل قارئ ملفات Excel");
+    const fileNames = ["tr99.xlsx", "tr99.xls"];
+    let response = null;
+    for (const fileName of fileNames) {
+      const attempt = await fetch(fileName);
+      if (attempt.ok) {
+        response = attempt;
+        break;
+      }
+    }
+    if (!response) throw new Error("لم يتم العثور على ملف tr99.xlsx أو tr99.xls بجانب الصفحة");
+    const buffer = await response.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    trainerInfoRows = XLSX.utils.sheet_to_json(sheet, { defval: "" }).map(row => {
+      const normalized = {};
+      Object.entries(row).forEach(([key, value]) => normalized[clean(key)] = clean(value));
+      return normalized;
+    });
+    return trainerInfoRows;
+  })();
+  return trainerInfoLoadPromise;
+}
+
+function findTrainerInfo(trainerId, trainerName) {
+  const id = clean(trainerId);
+  const name = clean(trainerName);
+  const idKeys = ["رقم المدرب", "رقم الموظف", "الرقم الوظيفي", "Trainer ID", "ID"];
+  const nameKeys = ["اسم المدرب", "الاسم", "اسم الموظف", "Trainer Name", "Name"];
+  return trainerInfoRows.find(row =>
+    idKeys.some(key => clean(row[key]) === id) ||
+    nameKeys.some(key => clean(row[key]) === name)
+  );
+}
+
+function renderTrainerInfo(data) {
+  if (!data) return `<div class="empty">لا توجد بيانات مطابقة لهذا المدرب في ملف tr99</div>`;
+  const entries = Object.entries(data).filter(([, value]) => clean(value));
+  if (!entries.length) return `<div class="empty">ملف tr99 لا يحتوي بيانات ظاهرة لهذا المدرب</div>`;
+  return `<div class="detail-grid">${entries.map(([key, value]) => `
+    <div class="detail-item">
+      <div class="key">${escapeHtml(key)}</div>
+      <div class="value">${escapeHtml(value)}</div>
+    </div>`).join("")}</div>`;
+}
+
+async function showTrainerInfo(trainerId, trainerName) {
+  els.trainerInfoTitle.textContent = `بيانات المدرب: ${clean(trainerName) || clean(trainerId)}`;
+  els.trainerInfoBody.innerHTML = `<div class="empty">جاري تحميل بيانات المدرب...</div>`;
+  els.trainerInfoModal.classList.remove("hidden");
+  els.trainerInfoModal.setAttribute("aria-hidden", "false");
+  try {
+    await loadTrainerInfo();
+    els.trainerInfoBody.innerHTML = renderTrainerInfo(findTrainerInfo(trainerId, trainerName));
+  } catch (err) {
+    els.trainerInfoBody.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function closeTrainerInfo() {
+  els.trainerInfoModal.classList.add("hidden");
+  els.trainerInfoModal.setAttribute("aria-hidden", "true");
 }
 
 function uniqueValues(field) {
@@ -486,10 +585,11 @@ function renderTrainerTable(data) {
   els.trainerTable.className = "schedule-table";
   els.trainerTable.innerHTML = `
     <thead><tr>
-      <th>اليوم</th><th>الفترة</th><th>المدرب</th><th>المقرر</th><th>نوع المحاضرة</th><th>القاعة</th><th>المحاضرات</th>
+      <th>بيانات</th><th>اليوم</th><th>الفترة</th><th>المدرب</th><th>المقرر</th><th>نوع المحاضرة</th><th>القاعة</th><th>المحاضرات</th>
     </tr></thead>
     <tbody>${data.map(r => `
       <tr class="${r.roomNumber ? "" : "no-room-row"}">
+        <td><button class="info-btn trainer-info-btn" type="button" title="بيانات المدرب" data-trainer-id="${escapeHtml(r.trainerId)}" data-trainer-name="${escapeHtml(r.trainer)}">i</button></td>
         <td>${escapeHtml(r.day)}</td>
         <td><span class="badge period time-badge">${escapeHtml(r.start)} - ${escapeHtml(r.end)}</span></td>
         <td class="main-cell"><strong>${escapeHtml(r.trainer)}</strong><div class="subtext">${escapeHtml(r.trainerId)}</div></td>
@@ -568,6 +668,15 @@ function escapeHtml(v) {
 els.trainerTab.addEventListener("click", () => switchView("trainers"));
 els.roomTab.addEventListener("click", () => switchView("rooms"));
 [els.trainerFilter, els.dayFilter, els.periodFilter, els.roomFilter, els.roomCategoryFilter, els.statusFilter].forEach(el => el.addEventListener("change", applyFilters));
+els.trainerTable.addEventListener("click", event => {
+  const button = event.target.closest(".trainer-info-btn");
+  if (!button) return;
+  showTrainerInfo(button.dataset.trainerId, button.dataset.trainerName);
+});
+els.trainerInfoClose.addEventListener("click", closeTrainerInfo);
+els.trainerInfoModal.addEventListener("click", event => {
+  if (event.target === els.trainerInfoModal) closeTrainerInfo();
+});
 
 fetch("SS07.csv")
   .then(res => {
