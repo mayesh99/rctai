@@ -244,7 +244,13 @@ function classifyRoom(roomName, roomNumber) {
     name.endsWith("F2") ||
     name.endsWith("F10")
   ) return "تجميع الحاسب";
-  if (name.endsWith("F3") || name.endsWith("F03") || name.endsWith("F11")) return "دوائر رقمية";
+  if (
+    number === "1012520003" ||
+    number === "1012520011" ||
+    name.endsWith("F3") ||
+    name.endsWith("F03") ||
+    name.endsWith("F11")
+  ) return "دوائر رقمية";
   return "قاعات نظري";
 }
 
