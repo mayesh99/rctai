@@ -11,208 +11,21 @@
   </style>
 </head>
 <body>
-  <div class="loading"><strong>جاري تجهيز الجدول</strong><span>تحميل آخر نسخة وإضافة جدول المتدرب...</span></div>
+  <div class="loading"><strong>جاري تجهيز الجدول</strong><span>تحميل آخر نسخة وربط جدول المتدربين بملف SS05...</span></div>
   <script>
-    function patchedRenderTrainerTable(data) {
-      if (!data.length) {
-        els.trainerTable.innerHTML = `<tr><td class="empty">لا توجد نتائج مطابقة</td></tr>`;
-        return;
-      }
-      const days = DAYS_ORDER.filter(day => data.some(row => row.day === day));
-      const activeDays = days.length ? days : [...new Set(data.map(row => row.day).filter(Boolean))];
-      const slotsMap = new Map();
-      data.forEach(row => {
-        const key = row.slotKey || `${row.start}-${row.end}`;
-        if (!slotsMap.has(key)) {
-          slotsMap.set(key, {
-            key,
-            start: row.start,
-            end: row.end,
-            startMin: row.startMin,
-            endMin: row.endMin,
-            label: row.timeLabel || `${row.start} - ${row.end}`
-          });
-        }
-      });
-      const slots = [...slotsMap.values()].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
-      const grouped = new Map();
-      data.forEach(row => {
-        const key = `${row.day}|${row.slotKey || `${row.start}-${row.end}`}`;
-        if (!grouped.has(key)) grouped.set(key, []);
-        grouped.get(key).push(row);
-      });
-      const lectureCard = row => `
-        <article class="lecture-card ${row.roomNumber ? "" : "no-room-card"}">
-          <div class="lecture-card-head">
-            <button class="info-btn trainer-info-btn" type="button" title="بيانات المدرب" data-trainer-id="${escapeHtml(row.trainerId)}" data-trainer-name="${escapeHtml(row.trainer)}">i</button>
-            <strong>${escapeHtml(row.trainer)}</strong>
-          </div>
-          <div class="lecture-course"><span class="course-code">${escapeHtml(row.course)}</span><span>${escapeHtml(row.courseName)}</span></div>
-          <div class="lecture-meta"><span>${escapeHtml(row.lectureDesc)}</span><span>${row.roomNumber ? escapeHtml(row.roomNumber) : "بدون قاعة"}</span></div>
-          <div class="lecture-count">المحاضرات: ${escapeHtml(row.lectures)}</div>
-        </article>`;
-      els.trainerTable.className = "schedule-table trainer-matrix trainer-matrix-days";
-      els.trainerTable.innerHTML = `
-        <thead><tr>
-          <th class="day-axis-head">اليوم</th>
-          ${slots.map(slot => `<th class="time-head"><span class="badge period time-stack"><span>${escapeHtml(slot.start)}</span><span class="time-sep">إلى</span><span>${escapeHtml(slot.end)}</span></span></th>`).join("")}
-        </tr></thead>
-        <tbody>${activeDays.map(day => `
-          <tr>
-            <th class="day-cell">${escapeHtml(day)}</th>
-            ${slots.map(slot => {
-              const items = grouped.get(`${day}|${slot.key}`) || [];
-              return `<td class="lecture-slot ${items.length ? "has-lecture" : ""}">${items.length ? items.map(lectureCard).join("") : `<span class="empty-slot">-</span>`}</td>`;
-            }).join("")}
-          </tr>`).join("")}</tbody>`;
-    }
-
-    const traineePatchScript = `
-let traineeScheduleRows = [];
-let traineeScheduleLoaded = false;
-const traineeEls = {
-  tab: document.getElementById("traineeScheduleTab"),
-  panel: document.getElementById("traineeSchedulePanel"),
-  fileInput: document.getElementById("traineeScheduleFileInput"),
-  numberInput: document.getElementById("traineeNumberInput"),
-  searchBtn: document.getElementById("traineeSearchBtn"),
-  clearBtn: document.getElementById("traineeClearBtn"),
-  table: document.getElementById("traineeScheduleTable"),
-  summary: document.getElementById("traineeScheduleSummary")
-};
-function pickValue(row, keys) {
-  for (const key of keys) {
-    if (clean(row[key])) return clean(row[key]);
-  }
-  const normalized = Object.entries(row).map(([key, value]) => [clean(key).replace(/\\s+/g, ""), clean(value)]);
-  for (const key of keys) {
-    const wanted = clean(key).replace(/\\s+/g, "");
-    const found = normalized.find(([name, value]) => name === wanted && value);
-    if (found) return found[1];
-  }
-  return "";
-}
-function normalizeTraineeSchedule(data) {
-  return data.map(item => {
-    const time = parseTimeRange(pickValue(item, ["الوقت", "وقت المحاضرة", "Time", "time"]));
-    const roomNumber = pickValue(item, ["رقم القاعة", "القاعة", "Room", "Room Number"]);
-    const roomName = pickValue(item, ["اسم القاعة", "وصف القاعة", "Room Name"]);
-    return {
-      traineeId: pickValue(item, ["رقم المتدرب", "رقم الطالب", "الرقم التدريبي", "Trainee ID", "Student ID", "traineeId", "studentId"]),
-      traineeName: pickValue(item, ["اسم المتدرب", "اسم الطالب", "الاسم", "Trainee Name", "Student Name", "Name"]),
-      trainer: pickValue(item, ["اسم المدرب", "المدرب", "Trainer", "Trainer Name"]),
-      trainerId: pickValue(item, ["رقم المدرب", "Trainer ID"]),
-      day: normalizeDay(pickValue(item, ["اليوم", "Day", "day"])),
-      start: time.start,
-      end: time.end,
-      startMin: time.startMin,
-      endMin: time.endMin,
-      slotKey: time.slotKey,
-      timeLabel: time.timeLabel,
-      course: pickValue(item, ["المقرر", "رمز المقرر", "Course", "Course Code"]),
-      courseName: pickValue(item, ["وصف المقرر", "اسم المقرر", "Course Name", "Course Description"]),
-      lectureDesc: pickValue(item, ["وصف المحاضرة", "نوع المحاضرة", "Lecture Type", "Lecture"]),
-      roomNumber,
-      roomName,
-      roomCategory: classifyRoom(roomName, roomNumber),
-      lectures: pickValue(item, ["عدد المحاضرات", "المحاضرات", "Lectures"])
-    };
-  }).filter(row => row.traineeId && row.day && row.slotKey && !isVirtualRoom(row) && !isSelfLearning(row));
-}
-function renderTraineeMessage(message) {
-  traineeEls.summary.textContent = "";
-  traineeEls.table.className = "schedule-table trainee-matrix";
-  traineeEls.table.innerHTML = '<tr><td class="empty">' + escapeHtml(message) + '</td></tr>';
-}
-function renderTraineeSchedule(matches, traineeId) {
-  if (!matches.length) {
-    renderTraineeMessage(traineeScheduleLoaded ? "لا يوجد جدول مطابق لرقم المتدرب " + traineeId : "ارفع ملف جدول المتدربين أولاً أو أضفه في GitHub بجانب الصفحة");
-    return;
-  }
-  const traineeName = matches.find(row => row.traineeName)?.traineeName || "";
-  traineeEls.summary.textContent = (traineeName ? traineeName + " - " : "") + "رقم المتدرب: " + traineeId + " | عدد المحاضرات: " + matches.length;
-  const activeDays = DAYS_ORDER.filter(day => matches.some(row => row.day === day));
-  const slotsMap = new Map();
-  matches.forEach(row => {
-    if (!slotsMap.has(row.slotKey)) slotsMap.set(row.slotKey, { key: row.slotKey, start: row.start, end: row.end, startMin: row.startMin, endMin: row.endMin });
-  });
-  const slots = [...slotsMap.values()].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
-  const grouped = new Map();
-  matches.forEach(row => {
-    const key = row.day + "|" + row.slotKey;
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key).push(row);
-  });
-  const card = row => '<article class="lecture-card"><div class="lecture-card-head"><strong>' + escapeHtml(row.course || row.courseName) + '</strong></div><div class="lecture-course"><span class="course-code">' + escapeHtml(row.course) + '</span><span>' + escapeHtml(row.courseName) + '</span></div><div class="lecture-meta"><span>' + escapeHtml(row.trainer) + '</span><span>' + escapeHtml(row.roomNumber || row.roomName || "بدون قاعة") + '</span></div><div class="lecture-count">' + escapeHtml(row.lectureDesc) + '</div></article>';
-  traineeEls.table.className = "schedule-table trainer-matrix trainer-matrix-days trainee-matrix";
-  traineeEls.table.innerHTML = '<thead><tr><th class="day-axis-head">اليوم</th>' + slots.map(slot => '<th class="time-head"><span class="badge period time-stack"><span>' + escapeHtml(slot.start) + '</span><span class="time-sep">إلى</span><span>' + escapeHtml(slot.end) + '</span></span></th>').join('') + '</tr></thead><tbody>' + activeDays.map(day => '<tr><th class="day-cell">' + escapeHtml(day) + '</th>' + slots.map(slot => { const items = grouped.get(day + "|" + slot.key) || []; return '<td class="lecture-slot ' + (items.length ? 'has-lecture' : '') + '">' + (items.length ? items.map(card).join('') : '<span class="empty-slot">-</span>') + '</td>'; }).join('') + '</tr>').join('') + '</tbody>';
-}
-function searchTraineeSchedule() {
-  const traineeId = clean(traineeEls.numberInput.value);
-  if (!traineeId) { renderTraineeMessage("اكتب رقم المتدرب للبحث عن جدوله"); return; }
-  const matches = traineeScheduleRows.filter(row => clean(row.traineeId) === traineeId);
-  renderTraineeSchedule(matches, traineeId);
-}
-async function loadDefaultTraineeSchedule() {
-  if (traineeScheduleLoaded) return;
-  const files = ["trainees.csv", "students.csv", "trainee_schedule.csv", "student_schedule.csv", "جدول_المتدربين.csv", "جدول-المتدربين.csv"];
-  for (const file of files) {
-    try {
-      const res = await fetch(file);
-      if (!res.ok) continue;
-      traineeScheduleRows = normalizeTraineeSchedule(csvToObjects(await res.text()));
-      traineeScheduleLoaded = true;
-      renderTraineeMessage("تم تحميل ملف جدول المتدربين من GitHub. اكتب رقم المتدرب للبحث.");
-      return;
-    } catch (err) {}
-  }
-  renderTraineeMessage("ارفع ملف جدول المتدربين أو أضفه في GitHub باسم trainees.csv ثم ابحث برقم المتدرب.");
-}
-async function handleTraineeScheduleUpload(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  try {
-    traineeScheduleRows = normalizeTraineeSchedule(await readScheduleFile(file));
-    traineeScheduleLoaded = true;
-    renderTraineeMessage("تم تحميل جدول المتدربين. اكتب رقم المتدرب للبحث.");
-  } catch (err) {
-    renderTraineeMessage(err.message || "تعذر قراءة ملف جدول المتدربين");
-  } finally {
-    event.target.value = "";
-  }
-}
-const originalSwitchView = switchView;
-switchView = function(view) {
-  originalSwitchView(view);
-  traineeEls.panel.classList.toggle("hidden", view !== "traineeSchedule");
-  traineeEls.tab.classList.toggle("active", view === "traineeSchedule");
-  if (view === "traineeSchedule") loadDefaultTraineeSchedule();
-};
-traineeEls.tab.addEventListener("click", () => switchView("traineeSchedule"));
-traineeEls.fileInput.addEventListener("change", handleTraineeScheduleUpload);
-traineeEls.searchBtn.addEventListener("click", searchTraineeSchedule);
-traineeEls.clearBtn.addEventListener("click", () => { traineeEls.numberInput.value = ""; renderTraineeMessage("اكتب رقم المتدرب للبحث عن جدوله"); });
-traineeEls.numberInput.addEventListener("keydown", event => { if (event.key === "Enter") searchTraineeSchedule(); });
-`;
-
     (async function(){
-      const baseUrl = "https://raw.githack.com/mayesh99/rctai/3480b3800b4879d919285e27b30a1366f64b1e9a/index.html";
-      const cssFrom = ".time-badge{direction:ltr;unicode-bidi:isolate;min-width:105px;text-align:center}";
-      const cssTo = cssFrom + ".time-stack{display:inline-grid;gap:2px;min-width:74px;justify-items:center;direction:ltr;unicode-bidi:isolate;line-height:1.15}.time-stack .time-sep{color:#64748b;font-size:11px;font-weight:700}.trainer-matrix{min-width:1680px;table-layout:fixed}.trainer-matrix th,.trainer-matrix td{white-space:normal;vertical-align:top}.trainer-matrix-days .day-axis-head{width:110px;text-align:center;position:sticky;right:0;z-index:3}.trainer-matrix-days .time-head{width:145px;text-align:center;vertical-align:middle}.trainer-matrix-days .day-cell{background:#f8fffb;color:#16332b;text-align:center;font-size:15px;position:sticky;right:0;z-index:2;vertical-align:middle}.trainer-matrix .lecture-slot{min-width:145px;background:#fff}.trainer-matrix .lecture-slot.has-lecture{background:#fbfefc}.lecture-card{border:1px solid #cfe7dc;background:#fff;border-radius:10px;padding:10px 11px;margin:0 0 8px;box-shadow:0 8px 18px rgba(15,23,42,.045);white-space:normal}.lecture-card:last-child{margin-bottom:0}.lecture-card.no-room-card{opacity:.58;background:#f8fbf9;border-style:dashed}.lecture-card-head{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px;margin-bottom:8px}.lecture-card-head .info-btn{width:28px;height:28px;font-size:14px}.lecture-card-head strong{font-size:14px;line-height:1.45;color:#16332b}.lecture-course{display:grid;gap:3px;color:#16332b;line-height:1.45}.lecture-course .course-code{font-size:13px}.lecture-meta{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:8px;color:#64748b;font-size:12px;border-top:1px solid #e7f2ec;padding-top:7px}.lecture-count{margin-top:6px;color:#5d766b;font-size:12px}.empty-slot{display:grid;place-items:center;min-height:64px;color:#b5c4bd}.trainee-tools{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:12px;align-items:end;margin-bottom:14px}.trainee-tools .file-action{height:43px}.trainee-summary{color:#007a53;font-weight:800;margin:8px 0 12px}.trainee-matrix{min-width:1180px}@media(max-width:900px){.trainee-tools{grid-template-columns:1fr}}";
-      const functionRegex = /function renderTrainerTable\(data\)\{[\s\S]*?\}\nfunction renderRoomTable/;
-      const patchedFunction = patchedRenderTrainerTable.toString().replace("patchedRenderTrainerTable", "renderTrainerTable") + "\nfunction renderRoomTable";
+      const sourceUrl = "https://raw.githack.com/mayesh99/rctai/40cf3f47a2cd5f14312a022cc2a167670c1539c1/index.html";
       try {
-        let html = await fetch(baseUrl, { cache: "no-store" }).then(res => {
+        let html = await fetch(sourceUrl, { cache: "no-store" }).then(res => {
           if (!res.ok) throw new Error("تعذر تحميل التطبيق");
           return res.text();
         });
         html = html
-          .replace(cssFrom, cssTo)
-          .replace(functionRegex, patchedFunction)
-          .replace('<button class="tab" id="trainerInfoTab">بيانات المدربين</button>', '<button class="tab" id="trainerInfoTab">بيانات المدربين</button><button class="tab" id="traineeScheduleTab">▦ جدول المتدرب</button>')
-          .replace('</div><div class="source-hint">مدعومة:', '<div class="source-card"><label class="file-action" for="traineeScheduleFileInput" title="رفع ملف جدول المتدربين"><span class="upload-mark">↑</span><span>رفع ملف</span><input id="traineeScheduleFileInput" type="file" accept=".xlsx,.xls,.csv"></label><div><div class="source-title">جدول المتدربين</div><div class="source-meta">GitHub: trainees.csv</div></div><div class="source-ok">▦</div></div></div><div class="source-hint">مدعومة:')
-          .replace('<section class="panel hidden" id="trainerInfoPanel"><h2>بيانات المدربين</h2><div class="table-wrap"><table id="trainerInfoTable"></table></div></section>', '<section class="panel hidden" id="trainerInfoPanel"><h2>بيانات المدربين</h2><div class="table-wrap"><table id="trainerInfoTable"></table></div></section><section class="panel hidden" id="traineeSchedulePanel"><h2>جدول المتدرب</h2><div class="trainee-tools"><div><label for="traineeNumberInput">رقم المتدرب</label><input id="traineeNumberInput" type="text" inputmode="numeric" placeholder="اكتب رقم المتدرب"></div><button class="action" id="traineeSearchBtn" type="button">بحث</button><button class="action secondary" id="traineeClearBtn" type="button">مسح</button></div><div class="trainee-summary" id="traineeScheduleSummary"></div><div class="table-wrap"><table id="traineeScheduleTable" class="schedule-table"><tr><td class="empty">اكتب رقم المتدرب للبحث عن جدوله</td></tr></table></div></section>')
-          .replace('els.trainerTab.addEventListener("click",()=>switchView("trainers"));', traineePatchScript + '\nels.trainerTab.addEventListener("click",()=>switchView("trainers"));');
+          .replaceAll("GitHub: trainees.csv", "GitHub: SS05.csv")
+          .replaceAll("trainees.csv", "SS05.csv")
+          .replaceAll("trainees.csv ثم ابحث", "SS05.csv ثم ابحث")
+          .replace("const files = [\"SS05.csv\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",", "const files = [\"SS05.csv\", \"ss05.csv\", \"SS05.CSV\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",")
+          .replace("ارفع ملف جدول المتدربين أو أضفه في GitHub باسم SS05.csv ثم ابحث برقم المتدرب.", "ارفع ملف جدول المتدربين أو أضفه في GitHub باسم SS05.csv ثم ابحث برقم المتدرب.");
         document.open();
         document.write(html);
         document.close();
