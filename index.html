@@ -27,6 +27,7 @@
           .replace("const files = [\"SS05.csv\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",", "const files = [\"SS05.csv\", \"ss05.csv\", \"SS05.CSV\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",")
           .replace(".trainee-matrix{min-width:1180px}@media", ".trainee-matrix{min-width:1180px}body.trainee-schedule-view .filters,body.trainee-schedule-view .actions,body.trainee-schedule-view .note,body.trainee-schedule-view .stats{display:none!important}@media")
           .replace("originalSwitchView(view);\n  traineeEls.panel.classList.toggle", "originalSwitchView(view);\n  document.body.classList.toggle(\"trainee-schedule-view\", view === \"traineeSchedule\");\n  traineeEls.panel.classList.toggle")
+          .replace("<span class=\\\"course-code\\\">' + escapeHtml(row.course) + '</span><span>' + escapeHtml(row.courseName) + '</span>", "<span class=\\\"course-code\\\">' + escapeHtml(row.courseName || row.course) + '</span>")
           .replace("ارفع ملف جدول المتدربين أو أضفه في GitHub باسم SS05.csv ثم ابحث برقم المتدرب.", "ارفع ملف جدول المتدربين أو أضفه في GitHub باسم SS05.csv ثم ابحث برقم المتدرب.");
         document.open();
         document.write(html);
