@@ -140,13 +140,8 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
     addPrintTool();
     applyHasebException();
   }
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries++;
-    init();
-    if ((document.querySelector('.print-schedule-btn') && document.querySelector('#trainerTable')) || tries > 140) clearInterval(timer);
-  }, 250);
   init();
+  setInterval(init, 500);
 })();
 </script>
 </body>
