@@ -12,60 +12,141 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
 <div class="loading"><strong>جاري تجهيز الجدول</strong><span>ضبط اسم ملف PDF باسم المدرب...</span></div>
 <script>
 (async function(){
-  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/d2c56b8bd27e405c3af8486b0619fed710687c09/index.html';
-  let html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
-  html = html
-    .replace('@page{size:A4 landscape;margin:7mm}', '@page{size:A4 landscape;margin:3mm}')
-    .replace('body{display:block!important;margin:0!important;padding:0!important;font-size:9px!important}', 'body{display:block!important;margin:0!important;padding:0!important;font-size:7px!important}')
-    .replace('body.printing-trainer #trainerTable{display:table!important;width:100%!important;max-width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important;page-break-inside:auto!important;font-size:7px!important}', 'body.printing-trainer #trainerTable{display:table!important;width:100%!important;max-width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important;page-break-inside:auto!important;font-size:5.8px!important;line-height:1.12!important}')
-    .replace('body.printing-trainer #trainerTable .day-axis-head,body.printing-trainer #trainerTable .day-cell{width:42px!important;min-width:42px!important}', 'body.printing-trainer #trainerTable .day-axis-head,body.printing-trainer #trainerTable .day-cell{width:28px!important;min-width:28px!important;padding:2px!important}')
-    .replace('body.printing-trainer #trainerTable .time-stack{min-width:0!important;padding:3px 2px!important;font-size:7px!important;line-height:1.2!important;border-radius:8px!important}', 'body.printing-trainer #trainerTable .time-stack{min-width:0!important;padding:2px!important;font-size:5.8px!important;line-height:1.1!important;border-radius:6px!important;white-space:normal!important}')
-    .replace('body.printing-trainer #trainerTable .lecture-slot{padding:3px!important}', 'body.printing-trainer #trainerTable .lecture-slot{padding:2px!important}')
-    .replace('body.printing-trainer #trainerTable .lecture-card{min-height:auto!important;margin:0 0 3px!important;padding:4px 5px!important;border-radius:6px!important;font-size:7px!important;line-height:1.25!important}', 'body.printing-trainer #trainerTable .lecture-card{min-height:auto!important;margin:0 0 2px!important;padding:3px 4px!important;border-radius:5px!important;font-size:5.8px!important;line-height:1.16!important}')
-    .replace('body.printing-trainer #trainerTable .lecture-card-head strong{font-size:7px!important;line-height:1.25!important}', 'body.printing-trainer #trainerTable .lecture-card-head strong{font-size:5.8px!important;line-height:1.15!important;overflow-wrap:anywhere!important}')
-    .replace('body.printing-trainer #trainerTable .lecture-meta{gap:2px!important;padding-top:3px!important;font-size:6.5px!important;line-height:1.2!important}', 'body.printing-trainer #trainerTable .lecture-meta{gap:1px!important;padding-top:2px!important;font-size:5.4px!important;line-height:1.12!important}')
-    .replace('body.printing-trainer #trainerTable .lecture-count{font-size:6.5px!important}', 'body.printing-trainer #trainerTable .lecture-count{font-size:5.4px!important}');
-
-  const filenameScript = '<scr' + 'ipt id="pdf-filename-by-trainer">(' + function(){
-    let originalTitle = document.title;
-    function safeFilename(name){
-      return String(name || '')
-        .replace(/[\\/:*?"<>|]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 120);
-    }
-    function selectedTrainerName(){
-      const select = document.querySelector('#trainerFilter') || [...document.querySelectorAll('select')].find(sel => {
-        const label = sel.closest('label')?.innerText || '';
-        const previous = sel.previousElementSibling?.innerText || '';
-        return label.includes('المدرب') || previous.includes('المدرب') || [...sel.options].some(o => o.textContent.includes('كل المدربين'));
-      });
-      if (!select) return 'جدول المدربين';
-      const option = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : select.options[select.selectedIndex];
-      const name = option ? option.textContent.trim() : '';
-      if (!name || name.includes('كل المدربين')) return 'جدول المدربين';
-      return 'جدول المدرب - ' + name;
-    }
-    function setPdfTitle(){
-      originalTitle = document.title;
-      document.title = safeFilename(selectedTrainerName()) || 'جدول المدربين';
-    }
-    function restoreTitle(){
-      if (originalTitle) document.title = originalTitle;
-    }
-    document.addEventListener('click', event => {
-      const btn = event.target && event.target.closest ? event.target.closest('.print-schedule-btn') : null;
-      if (!btn) return;
-      setPdfTitle();
-      setTimeout(restoreTitle, 7000);
-    }, true);
-    window.addEventListener('afterprint', restoreTitle);
-  }.toString() + ')();</scr' + 'ipt>';
-  html = html.replace('</body>', filenameScript + '</body>');
+  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/7396dfbc2ed49eb10653de8591ca2f5a83b2df4b/index.html';
+  const html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
   document.open();
   document.write(html);
   document.close();
+
+  const printCss = `
+.print-schedule-btn{display:inline-flex!important;align-items:center!important;gap:7px!important;background:#0f766e!important;color:#fff!important;border-color:#0f766e!important}.print-schedule-btn:before{content:'⎙';font-weight:900}.print-title{display:none}
+@media print{
+  @page{size:A4 landscape;margin:3mm}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-shadow:none!important}
+  html,body{background:#fff!important;color:#0f172a!important;width:auto!important;min-width:0!important;overflow:visible!important}
+  body{display:block!important;margin:0!important;padding:0!important;font-size:7px!important}
+  body.printing-trainer header,body.printing-trainer .source-panel,body.printing-trainer .tabs,body.printing-trainer .filters,body.printing-trainer .actions,body.printing-trainer .note,body.printing-trainer .stats,body.printing-trainer .info-btn,body.printing-trainer .modal,body.printing-trainer .print-schedule-btn{display:none!important}
+  body.printing-trainer main{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+  body.printing-trainer .panel{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important;box-shadow:none!important}
+  body.printing-trainer .panel>*{display:none!important}
+  body.printing-trainer .panel>.print-title,body.printing-trainer .panel>h2,body.printing-trainer .panel>.table-wrap{display:block!important}
+  body.printing-trainer .print-title{display:block!important;margin:0 0 4px!important;padding:0 0 4px!important;border-bottom:1px solid #cbd5e1!important;font-size:11px!important;font-weight:900!important;color:#0f172a!important;text-align:right!important}
+  body.printing-trainer .panel h2{display:block!important;margin:0 0 4px!important;font-size:11px!important;color:#0f172a!important;text-align:right!important}
+  body.printing-trainer .table-wrap,body.printing-trainer .table-shell,body.printing-trainer .schedule-table-wrap{display:block!important;width:100%!important;max-width:none!important;overflow:visible!important}
+  body.printing-trainer table:not(#trainerTable){display:none!important}
+  body.printing-trainer #trainerTable{display:table!important;width:100%!important;max-width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important;page-break-inside:auto!important;font-size:5.8px!important;line-height:1.12!important}
+  body.printing-trainer #trainerTable thead{display:table-header-group!important}
+  body.printing-trainer #trainerTable tr{page-break-inside:avoid!important;break-inside:avoid!important}
+  body.printing-trainer #trainerTable th,body.printing-trainer #trainerTable td{border:1px solid #d7e5dd!important;vertical-align:top!important}
+  body.printing-trainer #trainerTable .time-head{width:auto!important;min-width:0!important;padding:2px!important}
+  body.printing-trainer #trainerTable .day-axis-head,body.printing-trainer #trainerTable .day-cell{width:28px!important;min-width:28px!important;padding:2px!important}
+  body.printing-trainer #trainerTable .time-stack{min-width:0!important;padding:2px!important;font-size:5.8px!important;line-height:1.1!important;border-radius:6px!important;white-space:normal!important}
+  body.printing-trainer #trainerTable .lecture-slot{padding:2px!important}
+  body.printing-trainer #trainerTable .lecture-card{min-height:auto!important;margin:0 0 2px!important;padding:3px 4px!important;border-radius:5px!important;font-size:5.8px!important;line-height:1.16!important}
+  body.printing-trainer #trainerTable .lecture-card:before{top:3px!important;bottom:3px!important;width:2px!important}
+  body.printing-trainer #trainerTable .lecture-card-head{margin-bottom:2px!important;padding-inline-start:3px!important}
+  body.printing-trainer #trainerTable .lecture-card-head strong{font-size:5.8px!important;line-height:1.15!important;overflow-wrap:anywhere!important}
+  body.printing-trainer #trainerTable .lecture-course{gap:1px!important;margin:0 0 2px!important}
+  body.printing-trainer #trainerTable .lecture-meta{gap:1px!important;padding-top:2px!important;font-size:5.4px!important;line-height:1.12!important}
+  body.printing-trainer #trainerTable .lecture-count{font-size:5.4px!important}
+  body.printing-trainer #trainerTable .empty-slot{min-height:12px!important;font-size:5px!important}
+}`;
+  let originalTitle = document.title;
+  function safeFilename(name){
+    return String(name || '').replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
+  }
+  function isHasebBasic(card){
+    const text = card ? card.textContent : '';
+    return text.includes('حاسب-101') || text.includes('حاسب-102');
+  }
+  function applyHasebException(){
+    [...document.querySelectorAll('#trainerTable .lecture-card.split-session')].forEach(card => {
+      if (isHasebBasic(card)) card.classList.remove('split-session','split-start','split-end');
+    });
+  }
+  function trainerSelect(){
+    return document.querySelector('#trainerFilter') || [...document.querySelectorAll('select')].find(sel => [...sel.options].some(o => o.textContent.includes('كل المدربين')));
+  }
+  function selectedTrainerTitle(){
+    const select = trainerSelect();
+    if (!select) return 'جدول المدربين';
+    const option = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : select.options[select.selectedIndex];
+    const name = option ? option.textContent.trim() : '';
+    if (!name || name.includes('كل المدربين')) return 'جدول المدربين';
+    return 'جدول المدرب - ' + name;
+  }
+  function setPdfTitle(){
+    originalTitle = document.title;
+    document.title = safeFilename(selectedTrainerTitle()) || 'جدول المدربين';
+  }
+  function restoreTitle(){
+    if (originalTitle) document.title = originalTitle;
+  }
+  function ensurePrintCss(){
+    if (document.querySelector('#trainer-print-style')) return;
+    const style = document.createElement('style');
+    style.id = 'trainer-print-style';
+    style.textContent = printCss + '#trainerTable.trainer-matrix-days .lecture-card:not(.split-session){min-height:auto!important}';
+    document.head.appendChild(style);
+  }
+  function trainerPanel(){
+    return document.querySelector('#trainerTable')?.closest('.panel') || document.querySelector('.panel:not(.source-panel)');
+  }
+  function addPrintTitle(){
+    const panel = trainerPanel();
+    if (!panel || panel.querySelector('.print-title')) return;
+    const title = document.createElement('div');
+    title.className = 'print-title';
+    title.textContent = 'جدول المدربين';
+    panel.prepend(title);
+  }
+  function activateTrainerTab(){
+    const trainerTab = [...document.querySelectorAll('.tabs button,.tab')].find(btn => btn.textContent.trim() === 'جداول المدربين');
+    if (trainerTab && !trainerTab.classList.contains('active')) trainerTab.click();
+  }
+  function addPrintTool(){
+    if (document.querySelector('.print-schedule-btn')) return true;
+    const actions = document.querySelector('.actions');
+    if (!actions) return false;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'action secondary print-schedule-btn';
+    btn.textContent = 'طباعة PDF';
+    btn.title = 'طباعة جدول المدربين فقط أو حفظه كملف PDF';
+    btn.addEventListener('click', () => {
+      activateTrainerTab();
+      setTimeout(() => {
+        addPrintTitle();
+        applyHasebException();
+        setPdfTitle();
+        document.body.classList.add('printing-trainer');
+        window.print();
+        setTimeout(() => {
+          document.body.classList.remove('printing-trainer');
+          restoreTitle();
+        }, 7000);
+      }, 180);
+    });
+    actions.appendChild(btn);
+    return true;
+  }
+  window.addEventListener('afterprint', () => {
+    document.body.classList.remove('printing-trainer');
+    restoreTitle();
+  });
+  function init(){
+    ensurePrintCss();
+    addPrintTitle();
+    addPrintTool();
+    applyHasebException();
+  }
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+    init();
+    if ((document.querySelector('.print-schedule-btn') && document.querySelector('#trainerTable')) || tries > 140) clearInterval(timer);
+  }, 250);
+  init();
 })();
 </script>
 </body>
