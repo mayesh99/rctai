@@ -130,6 +130,10 @@
         <span>رفع SS07 Excel</span>
         <input id="ss07FileInput" type="file" accept=".xlsx,.xls,.csv" />
       </label>
+      <button class="action secondary" id="hideNoRoomBtn" type="button" title="إخفاء المحاضرات بدون قاعة">
+        <span aria-hidden="true">⊘</span>
+        <span id="hideNoRoomText">إخفاء بدون قاعة</span>
+      </button>
       <button class="action" onclick="applyFilters()">تطبيق الفلترة</button>
       <button class="action secondary" onclick="resetFilters()">إعادة ضبط</button>
     </div>
@@ -180,6 +184,7 @@ let rows = [];
 let trainerInfoRows = [];
 let trainerInfoLoadPromise = null;
 let currentView = "trainers";
+let hideNoRoomTrainerRows = false;
 
 const els = {
   trainerFilter: document.getElementById("trainerFilter"),
@@ -189,6 +194,8 @@ const els = {
   roomCategoryFilter: document.getElementById("roomCategoryFilter"),
   statusFilter: document.getElementById("statusFilter"),
   ss07FileInput: document.getElementById("ss07FileInput"),
+  hideNoRoomBtn: document.getElementById("hideNoRoomBtn"),
+  hideNoRoomText: document.getElementById("hideNoRoomText"),
   trainerTable: document.getElementById("trainerTable"),
   trainerInfoTable: document.getElementById("trainerInfoTable"),
   roomTable: document.getElementById("roomTable"),
@@ -769,9 +776,11 @@ function updateStats(filtered, roomRows) {
 function applyFilters() {
   const filtered = getFilteredRows();
   const roomRows = getRoomRows(filtered);
-  renderTrainerTable(filtered);
+  const trainerRows = hideNoRoomTrainerRows ? filtered.filter(r => r.roomNumber) : filtered;
+  renderTrainerTable(trainerRows);
   renderRoomTable(roomRows);
   updateStats(filtered, roomRows);
+  updateHideNoRoomButton();
 }
 
 function resetFilters() {
@@ -781,7 +790,19 @@ function resetFilters() {
   els.roomFilter.value = "all";
   els.roomCategoryFilter.value = "all";
   els.statusFilter.value = "all";
+  hideNoRoomTrainerRows = false;
   applyFilters();
+}
+
+function toggleNoRoomRows() {
+  hideNoRoomTrainerRows = !hideNoRoomTrainerRows;
+  applyFilters();
+}
+
+function updateHideNoRoomButton() {
+  els.hideNoRoomBtn.classList.toggle("active", hideNoRoomTrainerRows);
+  els.hideNoRoomBtn.setAttribute("aria-pressed", hideNoRoomTrainerRows ? "true" : "false");
+  els.hideNoRoomText.textContent = hideNoRoomTrainerRows ? "إظهار بدون قاعة" : "إخفاء بدون قاعة";
 }
 
 function switchView(view) {
@@ -830,6 +851,7 @@ els.roomTab.addEventListener("click", () => switchView("rooms"));
 els.trainerInfoTab.addEventListener("click", () => switchView("trainerInfo"));
 [els.trainerFilter, els.dayFilter, els.periodFilter, els.roomFilter, els.roomCategoryFilter, els.statusFilter].forEach(el => el.addEventListener("change", applyFilters));
 els.ss07FileInput.addEventListener("change", handleSs07Upload);
+els.hideNoRoomBtn.addEventListener("click", toggleNoRoomRows);
 els.trainerTable.addEventListener("click", event => {
   const button = event.target.closest(".trainer-info-btn");
   if (!button) return;
