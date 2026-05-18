@@ -11,7 +11,7 @@
   </style>
 </head>
 <body>
-  <div class="loading"><strong>جاري تجهيز الجدول</strong><span>تحميل آخر نسخة وتطبيق جدول الأيام والفترات...</span></div>
+  <div class="loading"><strong>جاري تجهيز الجدول</strong><span>تحميل آخر نسخة وتطبيق ترتيب الأيام والأوقات...</span></div>
   <script>
     function patchedRenderTrainerTable(data) {
       if (!data.length) {
@@ -37,7 +37,7 @@
       const slots = [...slotsMap.values()].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
       const grouped = new Map();
       data.forEach(row => {
-        const key = `${row.slotKey || `${row.start}-${row.end}`}|${row.day}`;
+        const key = `${row.day}|${row.slotKey || `${row.start}-${row.end}`}`;
         if (!grouped.has(key)) grouped.set(key, []);
         grouped.get(key).push(row);
       });
@@ -51,17 +51,17 @@
           <div class="lecture-meta"><span>${escapeHtml(row.lectureDesc)}</span><span>${row.roomNumber ? escapeHtml(row.roomNumber) : "بدون قاعة"}</span></div>
           <div class="lecture-count">المحاضرات: ${escapeHtml(row.lectures)}</div>
         </article>`;
-      els.trainerTable.className = "schedule-table trainer-matrix";
+      els.trainerTable.className = "schedule-table trainer-matrix trainer-matrix-days";
       els.trainerTable.innerHTML = `
         <thead><tr>
-          <th class="time-head">الفترة</th>
-          ${activeDays.map(day => `<th class="day-head">${escapeHtml(day)}</th>`).join("")}
+          <th class="day-axis-head">اليوم</th>
+          ${slots.map(slot => `<th class="time-head"><span class="badge period time-stack"><span>${escapeHtml(slot.start)}</span><span class="time-sep">إلى</span><span>${escapeHtml(slot.end)}</span></span></th>`).join("")}
         </tr></thead>
-        <tbody>${slots.map(slot => `
+        <tbody>${activeDays.map(day => `
           <tr>
-            <td class="time-cell"><span class="badge period time-stack"><span>${escapeHtml(slot.start)}</span><span class="time-sep">إلى</span><span>${escapeHtml(slot.end)}</span></span></td>
-            ${activeDays.map(day => {
-              const items = grouped.get(`${slot.key}|${day}`) || [];
+            <th class="day-cell">${escapeHtml(day)}</th>
+            ${slots.map(slot => {
+              const items = grouped.get(`${day}|${slot.key}`) || [];
               return `<td class="lecture-slot ${items.length ? "has-lecture" : ""}">${items.length ? items.map(lectureCard).join("") : `<span class="empty-slot">-</span>`}</td>`;
             }).join("")}
           </tr>`).join("")}</tbody>`;
@@ -70,7 +70,7 @@
     (async function(){
       const baseUrl = "https://raw.githack.com/mayesh99/rctai/3480b3800b4879d919285e27b30a1366f64b1e9a/index.html";
       const cssFrom = ".time-badge{direction:ltr;unicode-bidi:isolate;min-width:105px;text-align:center}";
-      const cssTo = cssFrom + ".time-stack{display:inline-grid;gap:2px;min-width:74px;justify-items:center;direction:ltr;unicode-bidi:isolate;line-height:1.15}.time-stack .time-sep{color:#64748b;font-size:11px;font-weight:700}.trainer-matrix{min-width:1180px;table-layout:fixed}.trainer-matrix th,.trainer-matrix td{white-space:normal;vertical-align:top}.trainer-matrix .time-head{width:116px;text-align:center}.trainer-matrix .day-head{text-align:center;font-size:15px}.trainer-matrix .time-cell{background:#f8fffb;text-align:center;position:sticky;right:0;z-index:1}.trainer-matrix .lecture-slot{min-width:190px;background:#fff}.trainer-matrix .lecture-slot.has-lecture{background:#fbfefc}.lecture-card{border:1px solid #cfe7dc;background:#fff;border-radius:10px;padding:10px 11px;margin:0 0 8px;box-shadow:0 8px 18px rgba(15,23,42,.045);white-space:normal}.lecture-card:last-child{margin-bottom:0}.lecture-card.no-room-card{opacity:.58;background:#f8fbf9;border-style:dashed}.lecture-card-head{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px;margin-bottom:8px}.lecture-card-head .info-btn{width:28px;height:28px;font-size:14px}.lecture-card-head strong{font-size:14px;line-height:1.45;color:#16332b}.lecture-course{display:grid;gap:3px;color:#16332b;line-height:1.45}.lecture-course .course-code{font-size:13px}.lecture-meta{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:8px;color:#64748b;font-size:12px;border-top:1px solid #e7f2ec;padding-top:7px}.lecture-count{margin-top:6px;color:#5d766b;font-size:12px}.empty-slot{display:grid;place-items:center;min-height:64px;color:#b5c4bd}";
+      const cssTo = cssFrom + ".time-stack{display:inline-grid;gap:2px;min-width:74px;justify-items:center;direction:ltr;unicode-bidi:isolate;line-height:1.15}.time-stack .time-sep{color:#64748b;font-size:11px;font-weight:700}.trainer-matrix{min-width:1680px;table-layout:fixed}.trainer-matrix th,.trainer-matrix td{white-space:normal;vertical-align:top}.trainer-matrix-days .day-axis-head{width:110px;text-align:center;position:sticky;right:0;z-index:3}.trainer-matrix-days .time-head{width:145px;text-align:center;vertical-align:middle}.trainer-matrix-days .day-cell{background:#f8fffb;color:#16332b;text-align:center;font-size:15px;position:sticky;right:0;z-index:2;vertical-align:middle}.trainer-matrix .lecture-slot{min-width:145px;background:#fff}.trainer-matrix .lecture-slot.has-lecture{background:#fbfefc}.lecture-card{border:1px solid #cfe7dc;background:#fff;border-radius:10px;padding:10px 11px;margin:0 0 8px;box-shadow:0 8px 18px rgba(15,23,42,.045);white-space:normal}.lecture-card:last-child{margin-bottom:0}.lecture-card.no-room-card{opacity:.58;background:#f8fbf9;border-style:dashed}.lecture-card-head{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px;margin-bottom:8px}.lecture-card-head .info-btn{width:28px;height:28px;font-size:14px}.lecture-card-head strong{font-size:14px;line-height:1.45;color:#16332b}.lecture-course{display:grid;gap:3px;color:#16332b;line-height:1.45}.lecture-course .course-code{font-size:13px}.lecture-meta{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:8px;color:#64748b;font-size:12px;border-top:1px solid #e7f2ec;padding-top:7px}.lecture-count{margin-top:6px;color:#5d766b;font-size:12px}.empty-slot{display:grid;place-items:center;min-height:64px;color:#b5c4bd}";
       const functionRegex = /function renderTrainerTable\(data\)\{[\s\S]*?\}\nfunction renderRoomTable/;
       const patchedFunction = patchedRenderTrainerTable.toString().replace("patchedRenderTrainerTable", "renderTrainerTable") + "\nfunction renderRoomTable";
       try {
