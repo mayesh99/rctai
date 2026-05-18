@@ -9,37 +9,93 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
 </style>
 </head>
 <body>
-<div class="loading"><strong>جاري تجهيز الجدول</strong><span>تطبيق استثناء حاسب-101 وحاسب-102 من دمج الفترات...</span></div>
+<div class="loading"><strong>جاري تجهيز الجدول</strong><span>إضافة خيار طباعة الجدول PDF...</span></div>
 <script>
 (async function(){
-  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/7396dfbc2ed49eb10653de8591ca2f5a83b2df4b/index.html';
+  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/9a46e7a520f76ed658f5f859338023b56877db7d/index.html';
   let html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
-  const exceptionScript = `<script id="haseb-period-exception">
+  const printScript = `<script id="schedule-print-tool">
 (function(){
-  function isHasebBasic(card){
-    const text = card ? card.textContent : '';
-    return text.includes('حاسب-101') || text.includes('حاسب-102');
-  }
-  function applyException(){
-    const cards = [...document.querySelectorAll('#trainerTable .lecture-card.split-session')];
-    cards.forEach(card => {
-      if (!isHasebBasic(card)) return;
-      card.classList.remove('split-session','split-start','split-end');
+  const printCss = ` + JSON.stringify(`
+.print-schedule-btn{display:inline-flex!important;align-items:center!important;gap:7px!important;background:#0f766e!important;color:#fff!important;border-color:#0f766e!important}.print-schedule-btn:before{content:'⎙';font-weight:900}.print-title{display:none}
+@media print{
+  @page{size:A4 landscape;margin:7mm}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-shadow:none!important}
+  html,body{background:#fff!important;color:#0f172a!important;width:auto!important;min-width:0!important;overflow:visible!important}
+  body{display:block!important;margin:0!important;padding:0!important;font-size:9px!important}
+  header,.source-panel,.tabs,.filters,.actions,.note,.stats,.info-btn,.modal,.print-schedule-btn{display:none!important}
+  main{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+  .panel{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important;box-shadow:none!important}
+  .panel h2{display:block!important;margin:0 0 6px!important;font-size:14px!important;color:#0f172a!important;text-align:right!important}
+  .print-title{display:block!important;margin:0 0 6px!important;padding:0 0 6px!important;border-bottom:1px solid #cbd5e1!important;font-size:13px!important;font-weight:900!important;color:#0f172a!important;text-align:right!important}
+  .table-wrap,.table-shell,.schedule-table-wrap{display:block!important;width:100%!important;max-width:none!important;overflow:visible!important}
+  table{width:100%!important;max-width:100%!important;border-collapse:collapse!important;page-break-inside:auto!important}
+  thead{display:table-header-group!important}
+  tr{page-break-inside:avoid!important;break-inside:avoid!important}
+  th,td{border:1px solid #d7e5dd!important;vertical-align:top!important}
+  #trainerTable.trainer-matrix-days,.trainee-matrix{min-width:0!important;width:100%!important;table-layout:fixed!important;font-size:7px!important}
+  #trainerTable.trainer-matrix-days .time-head,.trainee-matrix .time-head{width:auto!important;min-width:0!important}
+  #trainerTable.trainer-matrix-days .day-axis-head,#trainerTable.trainer-matrix-days .day-cell,.trainee-matrix .day-axis-head,.trainee-matrix .day-cell{width:42px!important;min-width:42px!important}
+  #trainerTable.trainer-matrix-days .time-stack,.trainee-matrix .time-stack{min-width:0!important;padding:3px 2px!important;font-size:7px!important;line-height:1.2!important;border-radius:8px!important}
+  #trainerTable.trainer-matrix-days .lecture-slot,.trainee-matrix .lecture-slot{padding:3px!important}
+  #trainerTable.trainer-matrix-days .lecture-card,.trainee-matrix .lecture-card{min-height:auto!important;margin:0 0 3px!important;padding:4px 5px!important;border-radius:6px!important;font-size:7px!important;line-height:1.25!important}
+  #trainerTable.trainer-matrix-days .lecture-card:before,.trainee-matrix .lecture-card:before{top:4px!important;bottom:4px!important;width:2px!important}
+  #trainerTable.trainer-matrix-days .lecture-card-head,.trainee-matrix .lecture-card-head{margin-bottom:3px!important;padding-inline-start:3px!important}
+  #trainerTable.trainer-matrix-days .lecture-card-head strong,.trainee-matrix .lecture-card-head strong{font-size:7px!important;line-height:1.25!important}
+  #trainerTable.trainer-matrix-days .lecture-course,.trainee-matrix .lecture-course{gap:2px!important;margin:0 0 3px!important}
+  #trainerTable.trainer-matrix-days .lecture-meta,.trainee-matrix .lecture-meta{gap:2px!important;padding-top:3px!important;font-size:6.5px!important;line-height:1.2!important}
+  #trainerTable.trainer-matrix-days .lecture-count,.trainee-matrix .lecture-count{font-size:6.5px!important}
+  #trainerTable.trainer-matrix-days .empty-slot,.trainee-matrix .empty-slot{min-height:18px!important;font-size:6px!important}
+}
+`) + `;
+  function addPrintTool(){
+    if (document.querySelector('.print-schedule-btn')) return true;
+    const actions = document.querySelector('.actions');
+    if (!actions) return false;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'action secondary print-schedule-btn';
+    btn.textContent = 'طباعة PDF';
+    btn.title = 'طباعة الجدول أو حفظه كملف PDF';
+    btn.addEventListener('click', () => {
+      document.body.classList.add('printing-schedule');
+      window.print();
+      setTimeout(() => document.body.classList.remove('printing-schedule'), 800);
     });
+    actions.appendChild(btn);
+    return true;
   }
-  const style = document.createElement('style');
-  style.id = 'haseb-period-exception-style';
-  style.textContent = '#trainerTable.trainer-matrix-days .lecture-card:not(.split-session){min-height:auto!important}';
-  document.head.appendChild(style);
+  function ensurePrintCss(){
+    if (document.querySelector('#schedule-print-style')) return;
+    const style = document.createElement('style');
+    style.id = 'schedule-print-style';
+    style.textContent = printCss;
+    document.head.appendChild(style);
+  }
+  function addPrintTitle(){
+    if (document.querySelector('.print-title')) return;
+    const panel = document.querySelector('.panel:not(.source-panel)');
+    if (!panel) return;
+    const title = document.createElement('div');
+    title.className = 'print-title';
+    title.textContent = 'جدول المدربين والقاعات';
+    panel.prepend(title);
+  }
+  function init(){
+    ensurePrintCss();
+    addPrintTitle();
+    addPrintTool();
+  }
+  init();
   let tries = 0;
   const timer = setInterval(() => {
     tries++;
-    applyException();
-    if (tries > 100) clearInterval(timer);
+    init();
+    if (document.querySelector('.print-schedule-btn') || tries > 100) clearInterval(timer);
   }, 250);
 })();
 <\/script>`;
-  html = html.replace('</body>', exceptionScript + '</body>');
+  html = html.replace('</body>', printScript + '</body>');
   document.open();
   document.write(html);
   document.close();
