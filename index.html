@@ -88,6 +88,7 @@
     <div class="tabs">
       <button class="tab active" id="trainerTab">جداول المدربين</button>
       <button class="tab" id="roomTab">القاعات المتاحة والمشغولة</button>
+      <button class="tab" id="trainerInfoTab">بيانات المدربين</button>
     </div>
 
     <div class="filters">
@@ -155,6 +156,11 @@
     <h2>القاعات المتاحة والمشغولة</h2>
     <div class="table-wrap"><table id="roomTable"></table></div>
   </section>
+
+  <section class="panel hidden" id="trainerInfoPanel">
+    <h2>بيانات المدربين</h2>
+    <div class="table-wrap"><table id="trainerInfoTable"></table></div>
+  </section>
 </main>
 
 <div class="modal hidden" id="trainerInfoModal" aria-hidden="true">
@@ -184,8 +190,10 @@ const els = {
   statusFilter: document.getElementById("statusFilter"),
   ss07FileInput: document.getElementById("ss07FileInput"),
   trainerTable: document.getElementById("trainerTable"),
+  trainerInfoTable: document.getElementById("trainerInfoTable"),
   roomTable: document.getElementById("roomTable"),
   trainerPanel: document.getElementById("trainerPanel"),
+  trainerInfoPanel: document.getElementById("trainerInfoPanel"),
   roomPanel: document.getElementById("roomPanel"),
   trainerInfoModal: document.getElementById("trainerInfoModal"),
   trainerInfoTitle: document.getElementById("trainerInfoTitle"),
@@ -193,6 +201,7 @@ const els = {
   trainerInfoClose: document.getElementById("trainerInfoClose"),
   trainerTab: document.getElementById("trainerTab"),
   roomTab: document.getElementById("roomTab"),
+  trainerInfoTab: document.getElementById("trainerInfoTab"),
   sessionCount: document.getElementById("sessionCount"),
   trainerCount: document.getElementById("trainerCount"),
   roomCount: document.getElementById("roomCount"),
@@ -460,8 +469,26 @@ function findTrainerInfo(trainerId, trainerName) {
   const nameKeys = ["اسم المدرب", "الاسم", "اسم الموظف", "Trainer Name", "Name"];
   return trainerInfoRows.find(row =>
     idKeys.some(key => clean(row[key]) === id) ||
-    nameKeys.some(key => clean(row[key]) === name)
+    nameKeys.some(key => sameTrainerName(row[key], name))
   );
+}
+
+function canonicalName(value) {
+  return clean(value).replace(/\s+/g, " ");
+}
+
+function sameTrainerName(left, right) {
+  const a = canonicalName(left);
+  const b = canonicalName(right);
+  if (!a || !b) return false;
+  if (a === b || a.includes(b) || b.includes(a)) return true;
+  const aParts = a.split(" ");
+  const bParts = b.split(" ");
+  return aParts.length >= 3 &&
+    bParts.length >= 3 &&
+    aParts[0] === bParts[0] &&
+    aParts[1] === bParts[1] &&
+    aParts[aParts.length - 1] === bParts[bParts.length - 1];
 }
 
 function renderTrainerInfo(data) {
@@ -704,6 +731,29 @@ function renderRoomTable(data) {
       </tr>`).join("")}</tbody>`;
 }
 
+function renderTrainerInfoTable(data) {
+  if (!data.length) {
+    els.trainerInfoTable.innerHTML = `<tr><td class="empty">لا توجد بيانات مدربين في ملف tr99</td></tr>`;
+    return;
+  }
+  const headers = [...new Set(data.flatMap(row => Object.keys(row).filter(key => clean(row[key]))))];
+  els.trainerInfoTable.className = "schedule-table";
+  els.trainerInfoTable.innerHTML = `
+    <thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+    <tbody>${data.map(row => `
+      <tr>${headers.map(header => `<td>${escapeHtml(row[header])}</td>`).join("")}</tr>
+    `).join("")}</tbody>`;
+}
+
+async function showTrainerInfoDirectory() {
+  els.trainerInfoTable.innerHTML = `<tr><td class="empty">جاري تحميل بيانات المدربين...</td></tr>`;
+  try {
+    renderTrainerInfoTable(await loadTrainerInfoCsvFirst());
+  } catch (err) {
+    els.trainerInfoTable.innerHTML = `<tr><td class="empty">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
 function updateStats(filtered, roomRows) {
   els.sessionCount.textContent = filtered.length;
   els.trainerCount.textContent = new Set(filtered.map(r => r.trainer).filter(Boolean)).size;
@@ -734,8 +784,11 @@ function switchView(view) {
   currentView = view;
   els.trainerPanel.classList.toggle("hidden", view !== "trainers");
   els.roomPanel.classList.toggle("hidden", view !== "rooms");
+  els.trainerInfoPanel.classList.toggle("hidden", view !== "trainerInfo");
   els.trainerTab.classList.toggle("active", view === "trainers");
   els.roomTab.classList.toggle("active", view === "rooms");
+  els.trainerInfoTab.classList.toggle("active", view === "trainerInfo");
+  if (view === "trainerInfo") showTrainerInfoDirectory();
 }
 
 function escapeHtml(v) {
@@ -770,6 +823,7 @@ async function handleSs07Upload(event) {
 
 els.trainerTab.addEventListener("click", () => switchView("trainers"));
 els.roomTab.addEventListener("click", () => switchView("rooms"));
+els.trainerInfoTab.addEventListener("click", () => switchView("trainerInfo"));
 [els.trainerFilter, els.dayFilter, els.periodFilter, els.roomFilter, els.roomCategoryFilter, els.statusFilter].forEach(el => el.addEventListener("change", applyFilters));
 els.ss07FileInput.addEventListener("change", handleSs07Upload);
 els.trainerTable.addEventListener("click", event => {
