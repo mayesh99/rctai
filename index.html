@@ -5,54 +5,43 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>جداول المدربين والقاعات</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f8fafc;font-family:Tahoma,Arial,sans-serif}
-#appFrame{width:100%;height:100%;border:0;display:block;background:#f8fafc}
-.loading{position:fixed;inset:0;display:grid;place-items:center;color:#0f172a;background:#f8fafc;z-index:1}.loading div{background:#fff;border:1px solid #dbe5ef;border-radius:16px;padding:22px;box-shadow:0 14px 36px rgba(15,23,42,.06);text-align:center}.loading strong{display:block;color:#007a53;margin-bottom:8px;font-size:20px}.loading span{color:#64748b}
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f172a;display:grid;min-height:100vh;place-items:center}.loading{width:min(520px,calc(100% - 32px));background:#fff;border:1px solid #dbe5ef;border-radius:16px;padding:22px;box-shadow:0 14px 36px rgba(15,23,42,.06);text-align:center}.loading strong{display:block;color:#007a53;margin-bottom:8px;font-size:20px}.loading span{color:#64748b}
 </style>
 </head>
 <body>
-<div class="loading" id="loader"><div><strong>جاري تجهيز الجدول</strong><span>تطبيق التصميم الجديد وفصل الفترة المسائية...</span></div></div>
-<iframe id="appFrame" src="https://raw.githack.com/mayesh99/rctai/142fa4cd2dff0bf6610d614be4f71d7eae562649/index.html"></iframe>
+<div class="loading"><strong>جاري تجهيز الجدول</strong><span>تطبيق التصميم الجديد وفصل الفترة المسائية...</span></div>
 <script>
 const polishCss = `body.trainee-schedule-view .filters,body.trainee-schedule-view .actions,body.trainee-schedule-view .note,body.trainee-schedule-view .stats{display:none!important}.trainee-matrix,#trainerTable.trainer-matrix-days{min-width:1180px;border:0!important;background:transparent!important}.trainee-matrix thead th,#trainerTable.trainer-matrix-days thead th{background:#0f766e!important;color:#fff!important;border-color:#0f766e!important;text-align:center}.trainee-matrix .time-stack,#trainerTable.trainer-matrix-days .time-stack{background:rgba(255,255,255,.14)!important;color:#fff!important;padding:7px 10px}.trainee-matrix .time-sep,#trainerTable.trainer-matrix-days .time-sep{color:#d9fff0!important}.trainee-matrix .day-cell,#trainerTable.trainer-matrix-days .day-cell{background:#ecf8f2!important;color:#0f513f!important;font-weight:900!important}.trainee-matrix .lecture-slot,#trainerTable.trainer-matrix-days .lecture-slot{background:#fff!important;padding:10px!important;border-color:#e4eee8!important}.trainee-matrix .lecture-slot.has-lecture,#trainerTable.trainer-matrix-days .lecture-slot.has-lecture{background:#fbfefd!important}.trainee-matrix .lecture-card,#trainerTable.trainer-matrix-days .lecture-card{position:relative;border:1px solid #cfe7dc!important;border-radius:12px!important;background:linear-gradient(180deg,#ffffff,#f8fffb)!important;padding:12px!important;box-shadow:0 10px 24px rgba(15,23,42,.07)!important;margin-bottom:10px!important}.trainee-matrix .lecture-card:before,#trainerTable.trainer-matrix-days .lecture-card:before{content:'';position:absolute;inset-inline-start:0;top:10px;bottom:10px;width:4px;border-radius:999px;background:#007a53}.trainee-matrix .lecture-card-head,#trainerTable.trainer-matrix-days .lecture-card-head{margin-bottom:10px!important;padding-inline-start:8px}.trainee-matrix .lecture-card-head strong,#trainerTable.trainer-matrix-days .lecture-card-head strong{display:block;color:#102f27!important;font-size:14px!important;line-height:1.55!important}.trainee-matrix .lecture-course,#trainerTable.trainer-matrix-days .lecture-course{display:flex!important;flex-wrap:wrap;gap:7px!important;margin:0 0 10px!important}.trainee-matrix .room-code,#trainerTable.trainer-matrix-days .room-code{background:#e5f4ed!important;color:#006c45!important;border:1px solid #c9eadb!important;border-radius:999px!important;padding:5px 9px!important;font-size:12px!important;font-weight:800!important}.trainee-matrix .lecture-meta,#trainerTable.trainer-matrix-days .lecture-meta{display:grid!important;grid-template-columns:1fr;gap:5px!important;margin-top:0!important;border-top:1px solid #e7f2ec!important;padding-top:9px!important;color:#52645d!important;font-size:12px!important}.trainee-matrix .lecture-meta span:first-child,#trainerTable.trainer-matrix-days .lecture-meta span:first-child{font-weight:800;color:#174435}.trainee-matrix .empty-slot,#trainerTable.trainer-matrix-days .empty-slot{min-height:82px!important;border:1px dashed #d8e9df;border-radius:12px;background:#fbfefd;color:#b4c4bd}`;
-function enhanceFrame(){
-  const frame = document.getElementById('appFrame');
-  const w = frame.contentWindow;
-  const d = frame.contentDocument;
-  if (!w || !d || !d.querySelector('#trainerTable')) return false;
-  if (!d.querySelector('#schedule-polish')) {
-    const style = d.createElement('style');
+function enhanceSchedules(){
+  if (!document.querySelector('#trainerTable') || typeof renderTrainerTable !== 'function') return false;
+  if (!document.querySelector('#schedule-polish')) {
+    const style = document.createElement('style');
     style.id = 'schedule-polish';
     style.textContent = polishCss;
-    d.head.appendChild(style);
+    document.head.appendChild(style);
   }
-  const splitEvening = row => {
-    if (!row || row.startMin !== 750 || row.endMin < 950) return [row];
-    return [
-      {...row,start:'12:30',end:'14:10',startMin:750,endMin:850,slotKey:'750-850',timeLabel:'12:30 - 14:10'},
-      {...row,start:'14:15',end:'15:55',startMin:855,endMin:955,slotKey:'855-955',timeLabel:'14:15 - 15:55'}
-    ];
-  };
-  if (!w.__codexSplitEveningApplied && typeof w.renderTrainerTable === 'function') {
-    w.__codexSplitEveningApplied = true;
-    const originalRenderTrainerTable = w.renderTrainerTable;
-    w.renderTrainerTable = data => originalRenderTrainerTable(data.flatMap(splitEvening));
-    if (typeof w.approvedPeriods === 'function') {
-      w.approvedPeriods = () => [
+  const splitEvening = row => row && row.startMin === 750 && row.endMin >= 950 ? [
+    {...row,start:'12:30',end:'14:10',startMin:750,endMin:850,slotKey:'750-850',timeLabel:'12:30 - 14:10'},
+    {...row,start:'14:15',end:'15:55',startMin:855,endMin:955,slotKey:'855-955',timeLabel:'14:15 - 15:55'}
+  ] : [row];
+  if (!window.__splitEveningApplied) {
+    window.__splitEveningApplied = true;
+    const originalRenderTrainerTable = renderTrainerTable;
+    renderTrainerTable = data => originalRenderTrainerTable(data.flatMap(splitEvening));
+    if (typeof approvedPeriods === 'function') {
+      approvedPeriods = () => [
         { key:'morning-full', label:'كامل الصباح 08:00 - 11:40', start:'08:00', end:'11:40', startMin:480, endMin:700 },
         { key:'evening-first', label:'الفترة المسائية الأولى 12:30 - 14:10', start:'12:30', end:'14:10', startMin:750, endMin:850 },
         { key:'evening-second', label:'الفترة المسائية الثانية 14:15 - 15:55', start:'14:15', end:'15:55', startMin:855, endMin:955 }
       ];
     }
-    if (typeof w.getFilteredRows === 'function') {
-      const oldGetFilteredRows = w.getFilteredRows;
-      w.getFilteredRows = function(){
+    if (typeof getFilteredRows === 'function') {
+      const oldGetFilteredRows = getFilteredRows;
+      getFilteredRows = function(){
         const result = oldGetFilteredRows();
-        const els = w.els;
-        const rows = w.rows || [];
-        const period = els?.periodFilter?.value || 'all';
+        const period = els.periodFilter.value;
         if (!period.startsWith('range:')) return result;
-        const selectedRange = w.approvedPeriods().find(p => p.key === period.slice(6));
+        const selectedRange = approvedPeriods().find(p => p.key === period.slice(6));
         if (!selectedRange) return result;
         return rows.filter(r =>
           (els.trainerFilter.value === 'all' || r.trainer === els.trainerFilter.value) &&
@@ -64,20 +53,24 @@ function enhanceFrame(){
       };
     }
   }
-  if (typeof w.populateFilters === 'function' && typeof w.applyFilters === 'function') {
-    w.populateFilters();
-    w.applyFilters();
+  if (typeof populateFilters === 'function' && typeof applyFilters === 'function') {
+    populateFilters();
+    applyFilters();
   }
-  document.getElementById('loader').style.display = 'none';
   return true;
 }
-document.getElementById('appFrame').addEventListener('load', () => {
+(async function(){
+  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/142fa4cd2dff0bf6610d614be4f71d7eae562649/index.html';
+  let html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
+  document.open();
+  document.write(html);
+  document.close();
   let tries = 0;
   const timer = setInterval(() => {
     tries++;
-    if (enhanceFrame() || tries > 80) clearInterval(timer);
+    if (enhanceSchedules() || tries > 80) clearInterval(timer);
   }, 250);
-});
+})();
 </script>
 </body>
 </html>
