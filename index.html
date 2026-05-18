@@ -739,10 +739,14 @@ function renderTrainerInfoTable(data) {
   const headers = [...new Set(data.flatMap(row => Object.keys(row).filter(key => clean(row[key]))))];
   els.trainerInfoTable.className = "schedule-table";
   els.trainerInfoTable.innerHTML = `
-    <thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+    <thead><tr>${headers.map(header => `<th>${escapeHtml(displayTrainerInfoHeader(header))}</th>`).join("")}</tr></thead>
     <tbody>${data.map(row => `
       <tr>${headers.map(header => `<td>${escapeHtml(row[header])}</td>`).join("")}</tr>
     `).join("")}</tbody>`;
+}
+
+function displayTrainerInfoHeader(header) {
+  return clean(header) === "الاسم" ? "المدرب *" : header;
 }
 
 async function showTrainerInfoDirectory() {
