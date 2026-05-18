@@ -15,6 +15,31 @@
   <script>
     (async function(){
       const sourceUrl = "https://raw.githack.com/mayesh99/rctai/40cf3f47a2cd5f14312a022cc2a167670c1539c1/index.html";
+      const overrideRender = `<script>
+function renderTraineeSchedule(matches, traineeId) {
+  if (!matches.length) {
+    renderTraineeMessage(traineeScheduleLoaded ? "لا يوجد جدول مطابق لرقم المتدرب " + traineeId : "ارفع ملف جدول المتدربين أولاً أو أضفه في GitHub بجانب الصفحة");
+    return;
+  }
+  const traineeName = matches.find(row => row.traineeName)?.traineeName || "";
+  traineeEls.summary.textContent = (traineeName ? traineeName + " - " : "") + "رقم المتدرب: " + traineeId + " | عدد المحاضرات: " + matches.length;
+  const activeDays = DAYS_ORDER.filter(day => matches.some(row => row.day === day));
+  const slotsMap = new Map();
+  matches.forEach(row => {
+    if (!slotsMap.has(row.slotKey)) slotsMap.set(row.slotKey, { key: row.slotKey, start: row.start, end: row.end, startMin: row.startMin, endMin: row.endMin });
+  });
+  const slots = [...slotsMap.values()].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+  const grouped = new Map();
+  matches.forEach(row => {
+    const key = row.day + "|" + row.slotKey;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(row);
+  });
+  const card = row => '<article class="lecture-card"><div class="lecture-card-head"><strong>' + escapeHtml(row.courseName || row.course) + '</strong></div><div class="lecture-course"><span class="course-code">' + escapeHtml(row.courseName || row.course) + '</span></div><div class="lecture-meta"><span>' + escapeHtml(row.trainer) + '</span><span>' + escapeHtml(row.roomNumber || row.roomName || "بدون قاعة") + '</span></div><div class="lecture-count">' + escapeHtml(row.lectureDesc) + '</div></article>';
+  traineeEls.table.className = "schedule-table trainer-matrix trainer-matrix-days trainee-matrix";
+  traineeEls.table.innerHTML = '<thead><tr><th class="day-axis-head">اليوم</th>' + slots.map(slot => '<th class="time-head"><span class="badge period time-stack"><span>' + escapeHtml(slot.start) + '</span><span class="time-sep">إلى</span><span>' + escapeHtml(slot.end) + '</span></span></th>').join('') + '</tr></thead><tbody>' + activeDays.map(day => '<tr><th class="day-cell">' + escapeHtml(day) + '</th>' + slots.map(slot => { const items = grouped.get(day + "|" + slot.key) || []; return '<td class="lecture-slot ' + (items.length ? 'has-lecture' : '') + '">' + (items.length ? items.map(card).join('') : '<span class="empty-slot">-</span>') + '</td>'; }).join('') + '</tr>').join('') + '</tbody>';
+}
+<\/script>`;
       try {
         let html = await fetch(sourceUrl, { cache: "no-store" }).then(res => {
           if (!res.ok) throw new Error("تعذر تحميل التطبيق");
@@ -27,17 +52,7 @@
           .replace("const files = [\"SS05.csv\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",", "const files = [\"SS05.csv\", \"ss05.csv\", \"SS05.CSV\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",")
           .replace(".trainee-matrix{min-width:1180px}@media", ".trainee-matrix{min-width:1180px}body.trainee-schedule-view .filters,body.trainee-schedule-view .actions,body.trainee-schedule-view .note,body.trainee-schedule-view .stats{display:none!important}@media")
           .replace("originalSwitchView(view);\n  traineeEls.panel.classList.toggle", "originalSwitchView(view);\n  document.body.classList.toggle(\"trainee-schedule-view\", view === \"traineeSchedule\");\n  traineeEls.panel.classList.toggle")
-          .replace("ارفع ملف جدول المتدربين أو أضفه في GitHub باسم SS05.csv ثم ابحث برقم المتدرب.", "ارفع ملف جدول المتدربين أو أضفه في GitHub باسم SS05.csv ثم ابحث برقم المتدرب.");
-
-        const cardStart = "const card = row => '<article class=\\\"lecture-card\\\"><div class=\\\"lecture-card-head\\\"><strong>'";
-        const cardEnd = "\n  traineeEls.table.className";
-        const start = html.indexOf(cardStart);
-        const end = start === -1 ? -1 : html.indexOf(cardEnd, start);
-        if (start !== -1 && end !== -1) {
-          const newCard = "const card = row => '<article class=\\\"lecture-card\\\"><div class=\\\"lecture-card-head\\\"><strong>' + escapeHtml(row.courseName || row.course) + '</strong></div><div class=\\\"lecture-course\\\"><span class=\\\"course-code\\\">' + escapeHtml(row.courseName || row.course) + '</span></div><div class=\\\"lecture-meta\\\"><span>' + escapeHtml(row.trainer) + '</span><span>' + escapeHtml(row.roomNumber || row.roomName || \\\"بدون قاعة\\\") + '</span></div><div class=\\\"lecture-count\\\">' + escapeHtml(row.lectureDesc) + '</div></article>';";
-          html = html.slice(0, start) + newCard + html.slice(end);
-        }
-
+          .replace("</body>", overrideRender + "</body>");
         document.open();
         document.write(html);
         document.close();
