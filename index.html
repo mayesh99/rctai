@@ -20,7 +20,7 @@
           if (!res.ok) throw new Error("تعذر تحميل التطبيق");
           return res.text();
         });
-        const newTraineeCard = "const card = row => '<article class=\\\"lecture-card\\\"><div class=\\\"lecture-card-head\\\"><strong>' + escapeHtml(row.courseName || row.course) + '</strong></div><div class=\\\"lecture-course\\\"><span class=\\\"course-code\\\">' + escapeHtml(row.courseName || row.course) + '</span><span class=\\\"room-code\\\">القاعة: ' + escapeHtml(row.roomNumber || \\\"بدون قاعة\\\") + '</span><span class=\\\"room-code\\\">الغرفة: ' + escapeHtml(row.roomName || row.roomNumber || \\\"بدون غرفة\\\") + '</span></div><div class=\\\"lecture-meta\\\"><span>' + escapeHtml(row.trainer) + '</span><span>' + escapeHtml(row.lectureDesc) + '</span></div><div class=\\\"lecture-count\\\">' + escapeHtml(row.course) + '</div></article>';\n  traineeEls.table.className";
+        const newTraineeCard = "const card = row => '<article class=\\\"lecture-card\\\"><div class=\\\"lecture-card-head\\\"><strong>' + escapeHtml(row.courseName || row.course) + '</strong></div><div class=\\\"lecture-course\\\"><span class=\\\"room-code\\\">القاعة: ' + escapeHtml(row.roomNumber || \\\"بدون قاعة\\\") + '</span><span class=\\\"room-code\\\">الغرفة: ' + escapeHtml(row.roomName || row.roomNumber || \\\"بدون غرفة\\\") + '</span></div><div class=\\\"lecture-meta\\\"><span>' + escapeHtml(row.trainer) + '</span><span>' + escapeHtml(row.lectureDesc) + '</span></div></article>';\n  traineeEls.table.className";
         html = html
           .replaceAll("GitHub: trainees.csv", "GitHub: SS05.csv")
           .replaceAll("trainees.csv", "SS05.csv")
