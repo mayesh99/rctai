@@ -26,6 +26,7 @@
           .replaceAll("trainees.csv", "SS05.csv")
           .replaceAll("trainees.csv ثم ابحث", "SS05.csv ثم ابحث")
           .replace("const files = [\"SS05.csv\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",", "const files = [\"SS05.csv\", \"ss05.csv\", \"SS05.CSV\", \"students.csv\", \"trainee_schedule.csv\", \"student_schedule.csv\",")
+          .replace("courseName: pickValue(item, [\"وصف المقرر\", \"اسم المقرر\", \"Course Name\", \"Course Description\"])", "courseName: pickValue(item, [\"عنوان المقرر\", \"وصف المقرر\", \"اسم المقرر\", \"Course Title\", \"Course Name\", \"Course Description\"])")
           .replace(".trainee-matrix{min-width:1180px}@media", ".trainee-matrix{min-width:1180px}body.trainee-schedule-view .filters,body.trainee-schedule-view .actions,body.trainee-schedule-view .note,body.trainee-schedule-view .stats{display:none!important}@media")
           .replace("originalSwitchView(view);\n  traineeEls.panel.classList.toggle", "originalSwitchView(view);\n  document.body.classList.toggle(\"trainee-schedule-view\", view === \"traineeSchedule\");\n  traineeEls.panel.classList.toggle")
           .replace(/const card = row => '<article class=[\s\S]*?<\/article>';\n  traineeEls\.table\.className/, newTraineeCard);
