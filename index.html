@@ -9,89 +9,40 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
 </style>
 </head>
 <body>
-<div class="loading"><strong>جاري تجهيز الجدول</strong><span>تطبيق تصميم المحاضرة الممتدة المتصل...</span></div>
+<div class="loading"><strong>جاري تجهيز الجدول</strong><span>تطبيق استثناء حاسب-101 وحاسب-102 من دمج الفترات...</span></div>
 <script>
-const polishCss = `body.trainee-schedule-view .filters,body.trainee-schedule-view .actions,body.trainee-schedule-view .note,body.trainee-schedule-view .stats{display:none!important}.table-wrap,.table-shell,.schedule-table-wrap{overflow-x:auto!important}.trainee-matrix,#trainerTable.trainer-matrix-days{min-width:2100px!important;table-layout:fixed!important;border:0!important;background:transparent!important;border-collapse:separate!important;border-spacing:0!important}.trainee-matrix thead th,#trainerTable.trainer-matrix-days thead th{background:#0f766e!important;color:#fff!important;border-color:#0f766e!important;text-align:center;vertical-align:middle!important}.trainee-matrix .time-head,#trainerTable.trainer-matrix-days .time-head{width:155px!important;min-width:155px!important}.trainee-matrix .day-axis-head,#trainerTable.trainer-matrix-days .day-axis-head,.trainee-matrix .day-cell,#trainerTable.trainer-matrix-days .day-cell{width:88px!important;min-width:88px!important}.trainee-matrix .time-stack,#trainerTable.trainer-matrix-days .time-stack{display:inline-flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;min-width:70px!important;background:rgba(255,255,255,.14)!important;color:#fff!important;padding:8px 10px!important;line-height:1.25!important}.trainee-matrix .time-sep,#trainerTable.trainer-matrix-days .time-sep{color:#d9fff0!important}.trainee-matrix .day-cell,#trainerTable.trainer-matrix-days .day-cell{background:#ecf8f2!important;color:#0f513f!important;font-weight:900!important}.trainee-matrix .lecture-slot,#trainerTable.trainer-matrix-days .lecture-slot{background:#fff!important;padding:10px!important;border-color:#e4eee8!important;vertical-align:top!important}.trainee-matrix .lecture-slot.has-lecture,#trainerTable.trainer-matrix-days .lecture-slot.has-lecture{background:#fbfefd!important}.trainee-matrix .lecture-slot:has(.split-session),#trainerTable.trainer-matrix-days .lecture-slot:has(.split-session){background:#fff8db!important}.trainee-matrix .lecture-card,#trainerTable.trainer-matrix-days .lecture-card{position:relative;box-sizing:border-box!important;width:100%!important;border:1px solid #cfe7dc!important;border-radius:12px!important;background:linear-gradient(180deg,#ffffff,#f8fffb)!important;padding:11px 12px!important;box-shadow:0 10px 22px rgba(15,23,42,.07)!important;margin:0 0 10px!important;overflow:hidden!important}.trainee-matrix .lecture-card:before,#trainerTable.trainer-matrix-days .lecture-card:before{content:'';position:absolute;inset-inline-start:0;top:10px;bottom:10px;width:4px;border-radius:999px;background:#007a53}.trainee-matrix .lecture-card-head,#trainerTable.trainer-matrix-days .lecture-card-head{margin-bottom:9px!important;padding-inline-start:8px}.trainee-matrix .lecture-card-head strong,#trainerTable.trainer-matrix-days .lecture-card-head strong{display:block;color:#102f27!important;font-size:13px!important;line-height:1.5!important;overflow-wrap:anywhere!important}.trainee-matrix .lecture-course,#trainerTable.trainer-matrix-days .lecture-course{display:flex!important;flex-direction:column!important;gap:6px!important;margin:0 0 9px!important}.trainee-matrix .lecture-course .course-code,#trainerTable.trainer-matrix-days .lecture-course .course-code{color:#007a53!important;font-weight:900!important}.trainee-matrix .room-code,#trainerTable.trainer-matrix-days .room-code{background:#e5f4ed!important;color:#006c45!important;border:1px solid #c9eadb!important;border-radius:999px!important;padding:5px 9px!important;font-size:12px!important;font-weight:800!important}.trainee-matrix .lecture-meta,#trainerTable.trainer-matrix-days .lecture-meta{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;margin-top:0!important;border-top:1px solid #e7f2ec!important;padding-top:8px!important;color:#52645d!important;font-size:11px!important;line-height:1.45!important}.trainee-matrix .lecture-meta span:first-child,#trainerTable.trainer-matrix-days .lecture-meta span:first-child{font-weight:800;color:#174435}.trainee-matrix .empty-slot,#trainerTable.trainer-matrix-days .empty-slot{min-height:82px!important;border:1px dashed #d8e9df;border-radius:12px;background:#fbfefd;color:#b4c4bd}#trainerTable.trainer-matrix-days .lecture-card.split-session{min-height:112px!important;border-color:#f5c542!important;background:linear-gradient(180deg,#fff8db,#fffdf2)!important;box-shadow:0 12px 24px rgba(180,126,0,.14)!important}#trainerTable.trainer-matrix-days .lecture-card.split-session>*{position:relative!important;z-index:1!important}#trainerTable.trainer-matrix-days .lecture-card.split-session:before{background:#f59e0b!important}#trainerTable.trainer-matrix-days .lecture-card.split-start{border-start-end-radius:3px!important;border-end-end-radius:3px!important;border-inline-end:3px solid #f59e0b!important}#trainerTable.trainer-matrix-days .lecture-card.split-start:after{content:'';position:absolute;inset-inline-end:0;top:0;bottom:0;width:14px;background:linear-gradient(90deg,rgba(245,158,11,.04),rgba(245,158,11,.18));pointer-events:none;z-index:0}#trainerTable.trainer-matrix-days .lecture-card.split-start .lecture-meta,#trainerTable.trainer-matrix-days .lecture-card.split-start .lecture-count{display:none!important}#trainerTable.trainer-matrix-days .lecture-card.split-end{border-start-start-radius:3px!important;border-end-start-radius:3px!important;border-inline-start:3px solid #f59e0b!important;display:block!important;padding-top:18px!important}#trainerTable.trainer-matrix-days .lecture-card.split-end:before{display:none!important}#trainerTable.trainer-matrix-days .lecture-card.split-end:after{content:'';position:absolute;inset:10px 12px;border-radius:9px;background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(245,158,11,.02));border:1px dashed rgba(245,158,11,.45);pointer-events:none;z-index:0}#trainerTable.trainer-matrix-days .lecture-card.split-end .lecture-card-head,#trainerTable.trainer-matrix-days .lecture-card.split-end .lecture-course{display:none!important}#trainerTable.trainer-matrix-days .lecture-card.split-end .lecture-meta{display:grid!important;border-top:0!important;padding:6px 10px!important;margin:0!important;gap:9px!important;color:#4b3b13!important;font-size:12px!important;text-align:center!important}#trainerTable.trainer-matrix-days .lecture-card.split-end .lecture-meta span{display:block!important;background:rgba(255,255,255,.64)!important;border:1px solid rgba(245,158,11,.22)!important;border-radius:8px!important;padding:7px 6px!important;font-weight:800!important;color:#4b3b13!important}#trainerTable.trainer-matrix-days .lecture-card.split-end .lecture-count{display:block!important;width:max-content!important;max-width:100%!important;margin:9px auto 0!important;background:#fff3c4!important;border:1px solid rgba(245,158,11,.35)!important;border-radius:999px!important;padding:5px 9px!important;color:#6b4b00!important;font-size:11px!important;font-weight:900!important}`;
-function enhanceSchedules(){
-  if (!document.querySelector('#trainerTable') || typeof renderTrainerTable !== 'function') return false;
-  if (!document.querySelector('#schedule-polish')) {
-    const style = document.createElement('style');
-    style.id = 'schedule-polish';
-    style.textContent = polishCss;
-    document.head.appendChild(style);
+(async function(){
+  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/7396dfbc2ed49eb10653de8591ca2f5a83b2df4b/index.html';
+  let html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
+  const exceptionScript = `<script id="haseb-period-exception">
+(function(){
+  function isHasebBasic(card){
+    const text = card ? card.textContent : '';
+    return text.includes('حاسب-101') || text.includes('حاسب-102');
   }
-  const splitEvening = row => row && row.startMin === 750 && row.endMin >= 950 ? [
-    {...row,start:'12:30',end:'14:10',startMin:750,endMin:850,slotKey:'750-850',timeLabel:'12:30 - 14:10',splitSession:true},
-    {...row,start:'14:15',end:'15:55',startMin:855,endMin:955,slotKey:'855-955',timeLabel:'14:15 - 15:55',splitSession:true}
-  ] : [row];
-  function cleanCardText(card){
-    return (card?.innerText || '').replace(/\s+/g,' ').trim();
-  }
-  function markSplitCards(){
-    const heads = [...document.querySelectorAll('#trainerTable thead .time-stack')].map(h => h.innerText);
-    const startIndex = heads.findIndex(text => text.includes('12:30') && text.includes('14:10'));
-    const endIndex = heads.findIndex(text => text.includes('14:15') && text.includes('15:55'));
-    if (startIndex < 0 || endIndex < 0) return;
-    document.querySelectorAll('#trainerTable .split-session').forEach(card => card.classList.remove('split-session','split-start','split-end'));
-    document.querySelectorAll('#trainerTable tbody tr').forEach(rowEl => {
-      const slots = [...rowEl.querySelectorAll('.lecture-slot')];
-      const startCards = [...(slots[startIndex]?.querySelectorAll('.lecture-card') || [])];
-      const endCards = [...(slots[endIndex]?.querySelectorAll('.lecture-card') || [])];
-      const used = new Set();
-      startCards.forEach(card => {
-        const text = cleanCardText(card);
-        if (!text) return;
-        const matchIndex = endCards.findIndex((endCard, i) => !used.has(i) && cleanCardText(endCard) === text);
-        if (matchIndex < 0) return;
-        used.add(matchIndex);
-        card.classList.add('split-session','split-start');
-        endCards[matchIndex].classList.add('split-session','split-end');
-      });
+  function applyException(){
+    const cards = [...document.querySelectorAll('#trainerTable .lecture-card.split-session')];
+    cards.forEach(card => {
+      if (!isHasebBasic(card)) return;
+      card.classList.remove('split-session','split-start','split-end');
     });
   }
-  if (!window.__splitEveningApplied) {
-    window.__splitEveningApplied = true;
-    const originalRenderTrainerTable = renderTrainerTable;
-    renderTrainerTable = data => { originalRenderTrainerTable(data.flatMap(splitEvening)); markSplitCards(); };
-    if (typeof approvedPeriods === 'function') {
-      approvedPeriods = () => [
-        { key:'morning-full', label:'كامل الصباح 08:00 - 11:40', start:'08:00', end:'11:40', startMin:480, endMin:700 },
-        { key:'evening-first', label:'الفترة المسائية الأولى 12:30 - 14:10', start:'12:30', end:'14:10', startMin:750, endMin:850 },
-        { key:'evening-second', label:'الفترة المسائية الثانية 14:15 - 15:55', start:'14:15', end:'15:55', startMin:855, endMin:955 }
-      ];
-    }
-    if (typeof getFilteredRows === 'function') {
-      const oldGetFilteredRows = getFilteredRows;
-      getFilteredRows = function(){
-        const result = oldGetFilteredRows();
-        const period = els.periodFilter.value;
-        if (!period.startsWith('range:')) return result;
-        const selectedRange = approvedPeriods().find(p => p.key === period.slice(6));
-        if (!selectedRange) return result;
-        return rows.filter(r =>
-          (els.trainerFilter.value === 'all' || r.trainer === els.trainerFilter.value) &&
-          (els.dayFilter.value === 'all' || r.day === els.dayFilter.value) &&
-          (r.startMin < selectedRange.endMin && r.endMin > selectedRange.startMin) &&
-          (els.roomFilter.value === 'all' || r.roomNumber === els.roomFilter.value) &&
-          (els.roomCategoryFilter.value === 'all' || r.roomCategory === els.roomCategoryFilter.value)
-        );
-      };
-    }
-  }
-  if (typeof populateFilters === 'function' && typeof applyFilters === 'function') { populateFilters(); applyFilters(); markSplitCards(); }
-  return true;
-}
-(async function(){
-  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/142fa4cd2dff0bf6610d614be4f71d7eae562649/index.html';
-  let html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
-  document.open();
-  document.write(html);
-  document.close();
+  const style = document.createElement('style');
+  style.id = 'haseb-period-exception-style';
+  style.textContent = '#trainerTable.trainer-matrix-days .lecture-card:not(.split-session){min-height:auto!important}';
+  document.head.appendChild(style);
   let tries = 0;
   const timer = setInterval(() => {
     tries++;
-    if (enhanceSchedules() || tries > 80) clearInterval(timer);
+    applyException();
+    if (tries > 100) clearInterval(timer);
   }, 250);
+})();
+<\/script>`;
+  html = html.replace('</body>', exceptionScript + '</body>');
+  document.open();
+  document.write(html);
+  document.close();
 })();
 </script>
 </body>
