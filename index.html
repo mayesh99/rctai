@@ -17,14 +17,14 @@
       const baseUrl = "https://raw.githack.com/mayesh99/rctai/3480b3800b4879d919285e27b30a1366f64b1e9a/index.html";
       const cssFrom = ".time-badge{direction:ltr;unicode-bidi:isolate;min-width:105px;text-align:center}";
       const cssTo = cssFrom + ".time-stack{display:inline-grid;gap:2px;min-width:74px;justify-items:center;direction:ltr;unicode-bidi:isolate;line-height:1.15}.time-stack .time-sep{color:#64748b;font-size:11px;font-weight:700}";
-      const cellFrom = '<td><span class=\\"badge period time-badge\\">${escapeHtml(r.start)} - ${escapeHtml(r.end)}</span></td>';
-      const cellTo = '<td><span class=\\"badge period time-stack\\"><span>${escapeHtml(r.start)}</span><span class=\\"time-sep\\">إلى</span><span>${escapeHtml(r.end)}</span></span></td>';
+      const cellRegex = /<td><span class=\\?"badge period time-badge\\?">\$\{escapeHtml\(r\.start\)\} - \$\{escapeHtml\(r\.end\)\}<\/span><\/td>/;
+      const cellTo = '<td><span class="badge period time-stack"><span>${escapeHtml(r.start)}</span><span class="time-sep">إلى</span><span>${escapeHtml(r.end)}</span></span></td>';
       try {
         let html = await fetch(baseUrl, { cache: "no-store" }).then(res => {
           if (!res.ok) throw new Error("تعذر تحميل التطبيق");
           return res.text();
         });
-        html = html.replace(cssFrom, cssTo).replace(cellFrom, cellTo);
+        html = html.replace(cssFrom, cssTo).replace(cellRegex, cellTo);
         document.open();
         document.write(html);
         document.close();
