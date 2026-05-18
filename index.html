@@ -9,7 +9,7 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
 </style>
 </head>
 <body>
-<div class="loading"><strong>جاري تجهيز الجدول</strong><span>ربط واتساب ببيانات المدربين...</span></div>
+<div class="loading"><strong>جاري تجهيز الجدول</strong><span>فتح واتساب مباشرة برقم المدرب...</span></div>
 <script>
 (async function(){
   const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/f92f4390bffdfd9b6abdf77aae762cf317a8f40a/index.html';
@@ -114,6 +114,11 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
   function setPdfTitle(name){
     document.title = name ? ('جدول المدرب - ' + name).replace(/[\\/:*?"<>|]+/g, ' ') : 'جدول المدربين';
   }
+  function openWhatsApp(targetWindow, phone, message){
+    const waUrl = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+    if (targetWindow && !targetWindow.closed) targetWindow.location.href = waUrl;
+    else window.location.href = waUrl;
+  }
   function addWhatsAppTool(){
     if (document.querySelector('.whatsapp-share-btn')) return true;
     const actions = document.querySelector('.actions');
@@ -122,30 +127,32 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
     btn.type = 'button';
     btn.className = 'action secondary whatsapp-share-btn';
     btn.textContent = 'إرسال واتساب';
-    btn.title = 'حفظ جدول المدرب PDF ثم فتح واتساب على رقم المدرب';
+    btn.title = 'فتح واتساب مباشرة على رقم المدرب';
     btn.addEventListener('click', async () => {
+      const waWindow = window.open('about:blank', '_blank');
+      if (waWindow) waWindow.document.write('<p style="font-family:Tahoma;text-align:center;margin-top:40px">جاري فتح واتساب...</p>');
       const trainerName = selectedTrainerName();
       if (!trainerName) {
+        if (waWindow) waWindow.close();
         alert('اختر مدرب محدد من فلتر المدرب قبل الإرسال عبر واتساب.');
         return;
       }
       await loadTrainerContacts();
       const contact = findContact(trainerName);
       if (!contact || !contact.phone) {
+        if (waWindow) waWindow.close();
         alert('لم أجد رقم جوال هذا المدرب في ملف بيانات المدربين tr99.csv.');
         return;
       }
       activateTrainerTab();
       setPdfTitle(trainerName);
       const message = `السلام عليكم\nمرفق لكم جدولكم التدريبي بصيغة PDF.\n\n${document.title}`;
+      openWhatsApp(waWindow, contact.phone, message);
       setTimeout(() => {
         document.body.classList.add('printing-trainer');
         window.print();
-        setTimeout(() => {
-          document.body.classList.remove('printing-trainer');
-          window.open('https://wa.me/' + contact.phone + '?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
-        }, 900);
-      }, 200);
+        setTimeout(() => document.body.classList.remove('printing-trainer'), 1000);
+      }, 300);
     });
     actions.appendChild(btn);
     return true;
