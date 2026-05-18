@@ -9,7 +9,7 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
 </style>
 </head>
 <body>
-<div class="loading"><strong>جاري تجهيز الجدول</strong><span>ضبط الطباعة بالعرض لجدول المدربين...</span></div>
+<div class="loading"><strong>جاري تجهيز الجدول</strong><span>ضبط اسم ملف PDF باسم المدرب...</span></div>
 <script>
 (async function(){
   const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/d2c56b8bd27e405c3af8486b0619fed710687c09/index.html';
@@ -25,6 +25,44 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
     .replace('body.printing-trainer #trainerTable .lecture-card-head strong{font-size:7px!important;line-height:1.25!important}', 'body.printing-trainer #trainerTable .lecture-card-head strong{font-size:5.8px!important;line-height:1.15!important;overflow-wrap:anywhere!important}')
     .replace('body.printing-trainer #trainerTable .lecture-meta{gap:2px!important;padding-top:3px!important;font-size:6.5px!important;line-height:1.2!important}', 'body.printing-trainer #trainerTable .lecture-meta{gap:1px!important;padding-top:2px!important;font-size:5.4px!important;line-height:1.12!important}')
     .replace('body.printing-trainer #trainerTable .lecture-count{font-size:6.5px!important}', 'body.printing-trainer #trainerTable .lecture-count{font-size:5.4px!important}');
+
+  const filenameScript = '<scr' + 'ipt id="pdf-filename-by-trainer">(' + function(){
+    let originalTitle = document.title;
+    function safeFilename(name){
+      return String(name || '')
+        .replace(/[\\/:*?"<>|]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120);
+    }
+    function selectedTrainerName(){
+      const select = document.querySelector('#trainerFilter') || [...document.querySelectorAll('select')].find(sel => {
+        const label = sel.closest('label')?.innerText || '';
+        const previous = sel.previousElementSibling?.innerText || '';
+        return label.includes('المدرب') || previous.includes('المدرب') || [...sel.options].some(o => o.textContent.includes('كل المدربين'));
+      });
+      if (!select) return 'جدول المدربين';
+      const option = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : select.options[select.selectedIndex];
+      const name = option ? option.textContent.trim() : '';
+      if (!name || name.includes('كل المدربين')) return 'جدول المدربين';
+      return 'جدول المدرب - ' + name;
+    }
+    function setPdfTitle(){
+      originalTitle = document.title;
+      document.title = safeFilename(selectedTrainerName()) || 'جدول المدربين';
+    }
+    function restoreTitle(){
+      if (originalTitle) document.title = originalTitle;
+    }
+    document.addEventListener('click', event => {
+      const btn = event.target && event.target.closest ? event.target.closest('.print-schedule-btn') : null;
+      if (!btn) return;
+      setPdfTitle();
+      setTimeout(restoreTitle, 7000);
+    }, true);
+    window.addEventListener('afterprint', restoreTitle);
+  }.toString() + ')();</scr' + 'ipt>';
+  html = html.replace('</body>', filenameScript + '</body>');
   document.open();
   document.write(html);
   document.close();
