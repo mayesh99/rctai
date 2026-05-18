@@ -12,11 +12,10 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
 <div class="loading"><strong>جاري تجهيز الجدول</strong><span>إضافة خيار طباعة الجدول PDF...</span></div>
 <script>
 (async function(){
-  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/9a46e7a520f76ed658f5f859338023b56877db7d/index.html';
+  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/7396dfbc2ed49eb10653de8591ca2f5a83b2df4b/index.html';
   let html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
-  const printScript = `<script id="schedule-print-tool">
-(function(){
-  const printCss = ` + JSON.stringify(`
+  const extraScript = '<scr' + 'ipt id="schedule-print-and-exceptions">(' + function(){
+    const printCss = `
 .print-schedule-btn{display:inline-flex!important;align-items:center!important;gap:7px!important;background:#0f766e!important;color:#fff!important;border-color:#0f766e!important}.print-schedule-btn:before{content:'⎙';font-weight:900}.print-title{display:none}
 @media print{
   @page{size:A4 landscape;margin:7mm}
@@ -46,56 +45,64 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
   #trainerTable.trainer-matrix-days .lecture-meta,.trainee-matrix .lecture-meta{gap:2px!important;padding-top:3px!important;font-size:6.5px!important;line-height:1.2!important}
   #trainerTable.trainer-matrix-days .lecture-count,.trainee-matrix .lecture-count{font-size:6.5px!important}
   #trainerTable.trainer-matrix-days .empty-slot,.trainee-matrix .empty-slot{min-height:18px!important;font-size:6px!important}
-}
-`) + `;
-  function addPrintTool(){
-    if (document.querySelector('.print-schedule-btn')) return true;
-    const actions = document.querySelector('.actions');
-    if (!actions) return false;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'action secondary print-schedule-btn';
-    btn.textContent = 'طباعة PDF';
-    btn.title = 'طباعة الجدول أو حفظه كملف PDF';
-    btn.addEventListener('click', () => {
-      document.body.classList.add('printing-schedule');
-      window.print();
-      setTimeout(() => document.body.classList.remove('printing-schedule'), 800);
-    });
-    actions.appendChild(btn);
-    return true;
-  }
-  function ensurePrintCss(){
-    if (document.querySelector('#schedule-print-style')) return;
-    const style = document.createElement('style');
-    style.id = 'schedule-print-style';
-    style.textContent = printCss;
-    document.head.appendChild(style);
-  }
-  function addPrintTitle(){
-    if (document.querySelector('.print-title')) return;
-    const panel = document.querySelector('.panel:not(.source-panel)');
-    if (!panel) return;
-    const title = document.createElement('div');
-    title.className = 'print-title';
-    title.textContent = 'جدول المدربين والقاعات';
-    panel.prepend(title);
-  }
-  function init(){
-    ensurePrintCss();
-    addPrintTitle();
-    addPrintTool();
-  }
-  init();
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries++;
+}`;
+    function isHasebBasic(card){
+      const text = card ? card.textContent : '';
+      return text.includes('حاسب-101') || text.includes('حاسب-102');
+    }
+    function applyHasebException(){
+      [...document.querySelectorAll('#trainerTable .lecture-card.split-session')].forEach(card => {
+        if (isHasebBasic(card)) card.classList.remove('split-session','split-start','split-end');
+      });
+    }
+    function ensurePrintCss(){
+      if (document.querySelector('#schedule-print-style')) return;
+      const style = document.createElement('style');
+      style.id = 'schedule-print-style';
+      style.textContent = printCss + '#trainerTable.trainer-matrix-days .lecture-card:not(.split-session){min-height:auto!important}';
+      document.head.appendChild(style);
+    }
+    function addPrintTitle(){
+      if (document.querySelector('.print-title')) return;
+      const panel = document.querySelector('.panel:not(.source-panel)');
+      if (!panel) return;
+      const title = document.createElement('div');
+      title.className = 'print-title';
+      title.textContent = 'جدول المدربين والقاعات';
+      panel.prepend(title);
+    }
+    function addPrintTool(){
+      if (document.querySelector('.print-schedule-btn')) return true;
+      const actions = document.querySelector('.actions');
+      if (!actions) return false;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'action secondary print-schedule-btn';
+      btn.textContent = 'طباعة PDF';
+      btn.title = 'طباعة الجدول أو حفظه كملف PDF';
+      btn.addEventListener('click', () => {
+        document.body.classList.add('printing-schedule');
+        window.print();
+        setTimeout(() => document.body.classList.remove('printing-schedule'), 800);
+      });
+      actions.appendChild(btn);
+      return true;
+    }
+    function init(){
+      ensurePrintCss();
+      addPrintTitle();
+      addPrintTool();
+      applyHasebException();
+    }
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries++;
+      init();
+      if ((document.querySelector('.print-schedule-btn') && document.querySelector('#trainerTable')) || tries > 120) clearInterval(timer);
+    }, 250);
     init();
-    if (document.querySelector('.print-schedule-btn') || tries > 100) clearInterval(timer);
-  }, 250);
-})();
-<\/script>`;
-  html = html.replace('</body>', printScript + '</body>');
+  }.toString() + ')();</scr' + 'ipt>';
+  html = html.replace('</body>', extraScript + '</body>');
   document.open();
   document.write(html);
   document.close();
