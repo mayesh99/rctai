@@ -9,7 +9,7 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
 </style>
 </head>
 <body>
-<div class="loading"><strong>جاري تجهيز الجدول</strong><span>فتح واتساب مباشرة برقم المدرب...</span></div>
+<div class="loading"><strong>جاري تجهيز الجدول</strong><span>تجهيز الطباعة قبل فتح واتساب...</span></div>
 <script>
 (async function(){
   const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/f92f4390bffdfd9b6abdf77aae762cf317a8f40a/index.html';
@@ -19,6 +19,7 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
   document.close();
 
   let trainerContacts = [];
+  let contactsPromise = null;
   function parseCsv(text){
     const rows = [];
     let row = [], cell = '', quoted = false;
@@ -54,23 +55,27 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
   }
   async function loadTrainerContacts(){
     if (trainerContacts.length) return trainerContacts;
-    const urls = [new URL('tr99.csv', location.href).href, 'https://raw.githack.com/mayesh99/rctai/main/tr99.csv'];
-    let text = '';
-    for (const url of urls) {
-      try {
-        const res = await fetch(url, {cache:'no-store'});
-        if (res.ok) { text = await res.text(); break; }
-      } catch(e) {}
-    }
-    const rows = parseCsv(text);
-    const header = rows.shift() || [];
-    const nameIndex = header.findIndex(h => /الاسم|name/i.test(h));
-    const phoneIndex = header.findIndex(h => /الجوال|جوال|هاتف|phone|mobile/i.test(h));
-    trainerContacts = rows.map(r => ({
-      name: (r[nameIndex >= 0 ? nameIndex : 0] || '').trim(),
-      phone: normalizePhone(r[phoneIndex >= 0 ? phoneIndex : 2] || '')
-    })).filter(x => x.name && x.phone);
-    return trainerContacts;
+    if (contactsPromise) return contactsPromise;
+    contactsPromise = (async () => {
+      const urls = [new URL('tr99.csv', location.href).href, 'https://raw.githack.com/mayesh99/rctai/main/tr99.csv'];
+      let text = '';
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, {cache:'no-store'});
+          if (res.ok) { text = await res.text(); break; }
+        } catch(e) {}
+      }
+      const rows = parseCsv(text);
+      const header = rows.shift() || [];
+      const nameIndex = header.findIndex(h => /الاسم|name/i.test(h));
+      const phoneIndex = header.findIndex(h => /الجوال|جوال|هاتف|phone|mobile/i.test(h));
+      trainerContacts = rows.map(r => ({
+        name: (r[nameIndex >= 0 ? nameIndex : 0] || '').trim(),
+        phone: normalizePhone(r[phoneIndex >= 0 ? phoneIndex : 2] || '')
+      })).filter(x => x.name && x.phone);
+      return trainerContacts;
+    })();
+    return contactsPromise;
   }
   function trainerSelect(){
     return document.querySelector('#trainerFilter') || [...document.querySelectorAll('select')].find(sel => [...sel.options].some(o => o.textContent.includes('كل المدربين')));
@@ -114,10 +119,21 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
   function setPdfTitle(name){
     document.title = name ? ('جدول المدرب - ' + name).replace(/[\\/:*?"<>|]+/g, ' ') : 'جدول المدربين';
   }
-  function openWhatsApp(targetWindow, phone, message){
+  function goToWhatsApp(targetWindow, phone, message){
     const waUrl = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
     if (targetWindow && !targetWindow.closed) targetWindow.location.href = waUrl;
     else window.location.href = waUrl;
+  }
+  function openWaitingWindow(){
+    const win = window.open('about:blank', '_blank');
+    if (win) {
+      try {
+        win.document.open();
+        win.document.write('<!doctype html><html lang="ar" dir="rtl"><title>جاري فتح واتساب</title><body style="font-family:Tahoma,Arial;text-align:center;padding:40px"><h3>جاري تجهيز واتساب...</h3><p>احفظ ملف PDF من نافذة الطباعة، ثم سيظهر واتساب هنا.</p></body></html>');
+        win.document.close();
+      } catch(e) {}
+    }
+    return win;
   }
   function addWhatsAppTool(){
     if (document.querySelector('.whatsapp-share-btn')) return true;
@@ -127,16 +143,14 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
     btn.type = 'button';
     btn.className = 'action secondary whatsapp-share-btn';
     btn.textContent = 'إرسال واتساب';
-    btn.title = 'فتح واتساب مباشرة على رقم المدرب';
+    btn.title = 'طباعة جدول المدرب PDF ثم فتح واتساب على رقم المدرب';
     btn.addEventListener('click', async () => {
-      const waWindow = window.open('about:blank', '_blank');
-      if (waWindow) waWindow.document.write('<p style="font-family:Tahoma;text-align:center;margin-top:40px">جاري فتح واتساب...</p>');
       const trainerName = selectedTrainerName();
       if (!trainerName) {
-        if (waWindow) waWindow.close();
         alert('اختر مدرب محدد من فلتر المدرب قبل الإرسال عبر واتساب.');
         return;
       }
+      const waWindow = openWaitingWindow();
       await loadTrainerContacts();
       const contact = findContact(trainerName);
       if (!contact || !contact.phone) {
@@ -147,12 +161,21 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
       activateTrainerTab();
       setPdfTitle(trainerName);
       const message = `السلام عليكم\nمرفق لكم جدولكم التدريبي بصيغة PDF.\n\n${document.title}`;
-      openWhatsApp(waWindow, contact.phone, message);
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        window.removeEventListener('afterprint', finish);
+        document.body.classList.remove('printing-trainer');
+        goToWhatsApp(waWindow, contact.phone, message);
+      };
+      window.addEventListener('afterprint', finish, {once:true});
+      document.body.classList.add('printing-trainer');
+      try { window.focus(); } catch(e) {}
       setTimeout(() => {
-        document.body.classList.add('printing-trainer');
         window.print();
-        setTimeout(() => document.body.classList.remove('printing-trainer'), 1000);
-      }, 300);
+        setTimeout(finish, 1200);
+      }, 120);
     });
     actions.appendChild(btn);
     return true;
@@ -162,6 +185,7 @@ body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f17
     addWhatsAppTool();
   }
   initWhatsApp();
+  loadTrainerContacts();
   setInterval(initWhatsApp, 600);
 })();
 </script>
