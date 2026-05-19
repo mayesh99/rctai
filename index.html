@@ -5,188 +5,70 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>جداول المدربين والقاعات</title>
 <style>
-body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f172a;display:grid;min-height:100vh;place-items:center}.loading{width:min(520px,calc(100% - 32px));background:#fff;border:1px solid #dbe5ef;border-radius:16px;padding:22px;box-shadow:0 14px 36px rgba(15,23,42,.06);text-align:center}.loading strong{display:block;color:#007a53;margin-bottom:8px;font-size:20px}.loading span{color:#64748b}
-</style>
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f8fafc;color:#0f172a;display:grid;min-height:100vh;place-items:center}.loading{width:min(520px,calc(100% - 32px));background:#fff;border:1px solid #dbe5ef;border-radius:16px;padding:22px;box-shadow:0 14px 36px rgba(15,23,42,.06);text-align:center}.loading strong{display:block;color:#007a53;margin-bottom:8px;font-size:20px}.loading span{color:#64748b}</style>
 </head>
 <body>
-<div class="loading"><strong>جاري تجهيز الجدول</strong><span>تجهيز الطباعة قبل فتح واتساب...</span></div>
+<div class="loading"><strong>جاري تجهيز الموقع</strong><span>تفعيل تسجيل الدخول...</span></div>
 <script>
 (async function(){
-  const sourceUrl = 'https://raw.githack.com/mayesh99/rctai/f92f4390bffdfd9b6abdf77aae762cf317a8f40a/index.html';
-  const html = await fetch(sourceUrl, {cache:'no-store'}).then(r => r.text());
-  document.open();
-  document.write(html);
-  document.close();
+  const sourceUrl='https://raw.githack.com/mayesh99/rctai/b2d525051662c54ca675348ade23a647ef981171/index.html';
+  const html=await fetch(sourceUrl,{cache:'no-store'}).then(r=>r.text());
+  document.open();document.write(html);document.close();
 
-  let trainerContacts = [];
-  let contactsPromise = null;
-  function parseCsv(text){
-    const rows = [];
-    let row = [], cell = '', quoted = false;
-    text = String(text || '').replace(/^\uFEFF/, '');
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i], next = text[i + 1];
-      if (ch === '"') {
-        if (quoted && next === '"') { cell += '"'; i++; }
-        else quoted = !quoted;
-      } else if (ch === ',' && !quoted) {
-        row.push(cell); cell = '';
-      } else if ((ch === '\n' || ch === '\r') && !quoted) {
-        if (ch === '\r' && next === '\n') i++;
-        row.push(cell); cell = '';
-        if (row.some(v => String(v).trim())) rows.push(row);
-        row = [];
-      } else cell += ch;
+  const HEAD_CODE='1234';
+  let contacts=[];
+  const cleanPhone=v=>{let d=String(v||'').replace(/\D/g,''); if(d.startsWith('00'))d=d.slice(2); if(d.startsWith('966'))return d; if(d.startsWith('0'))return '966'+d.slice(1); if(d.length===9&&d.startsWith('5'))return '966'+d; return d;};
+  const cleanName=v=>String(v||'').replace(/[إأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[^\u0600-\u06FF\s]/g,' ').replace(/\s+/g,' ').trim();
+  function parseSimpleCsv(text){
+    return String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).filter(Boolean).map(line=>line.split(',').map(x=>x.trim()));
+  }
+  async function loadContacts(){
+    if(contacts.length) return contacts;
+    let text='';
+    for(const url of [new URL('tr99.csv',location.href).href,'https://raw.githack.com/mayesh99/rctai/main/tr99.csv']){
+      try{const r=await fetch(url,{cache:'no-store'}); if(r.ok){text=await r.text(); break;}}catch(e){}
     }
-    row.push(cell);
-    if (row.some(v => String(v).trim())) rows.push(row);
-    return rows;
+    const rows=parseSimpleCsv(text); const head=rows.shift()||[];
+    const ni=head.findIndex(h=>/الاسم|name/i.test(h)); const pi=head.findIndex(h=>/الجوال|جوال|phone|mobile/i.test(h));
+    contacts=rows.map(r=>({name:r[ni>=0?ni:0]||'',phone:cleanPhone(r[pi>=0?pi:2]||'')})).filter(x=>x.name&&x.phone);
+    return contacts;
   }
-  function normalizeName(value){
-    return String(value || '').replace(/[إأآا]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/[^\u0600-\u06FF\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  function score(a,b){
+    a=cleanName(a); b=cleanName(b); if(!a||!b)return 0; if(a===b)return 100; if(a.includes(b)||b.includes(a))return 70;
+    const aa=a.split(' ').filter(x=>x.length>1), bb=b.split(' ').filter(x=>x.length>1); return bb.filter(x=>aa.includes(x)).length*12;
   }
-  function normalizePhone(value){
-    let digits = String(value || '').replace(/\D/g, '');
-    if (!digits) return '';
-    if (digits.startsWith('00')) digits = digits.slice(2);
-    if (digits.startsWith('0')) digits = '966' + digits.slice(1);
-    else if (digits.length === 9 && digits.startsWith('5')) digits = '966' + digits;
-    return digits;
+  function trainerSelect(){return document.querySelector('#trainerFilter')||[...document.querySelectorAll('select')].find(s=>[...s.options].some(o=>o.textContent.includes('كل المدربين')));}
+  function setTrainer(name){
+    const s=trainerSelect(); if(!s)return false; let bi=-1,bs=0;
+    [...s.options].forEach((o,i)=>{const sc=score(name,o.textContent); if(sc>bs){bs=sc;bi=i;}});
+    if(bi<0||bs<24)return false; s.selectedIndex=bi; s.value=s.options[bi].value; s.dispatchEvent(new Event('change',{bubbles:true}));
+    const apply=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('تطبيق الفلترة')); if(apply)apply.click(); return true;
   }
-  async function loadTrainerContacts(){
-    if (trainerContacts.length) return trainerContacts;
-    if (contactsPromise) return contactsPromise;
-    contactsPromise = (async () => {
-      const urls = [new URL('tr99.csv', location.href).href, 'https://raw.githack.com/mayesh99/rctai/main/tr99.csv'];
-      let text = '';
-      for (const url of urls) {
-        try {
-          const res = await fetch(url, {cache:'no-store'});
-          if (res.ok) { text = await res.text(); break; }
-        } catch(e) {}
-      }
-      const rows = parseCsv(text);
-      const header = rows.shift() || [];
-      const nameIndex = header.findIndex(h => /الاسم|name/i.test(h));
-      const phoneIndex = header.findIndex(h => /الجوال|جوال|هاتف|phone|mobile/i.test(h));
-      trainerContacts = rows.map(r => ({
-        name: (r[nameIndex >= 0 ? nameIndex : 0] || '').trim(),
-        phone: normalizePhone(r[phoneIndex >= 0 ? phoneIndex : 2] || '')
-      })).filter(x => x.name && x.phone);
-      return trainerContacts;
-    })();
-    return contactsPromise;
+  function trainerTab(){const b=[...document.querySelectorAll('.tabs button,.tab')].find(x=>x.textContent.trim()==='جداول المدربين'); if(b&&!b.classList.contains('active'))b.click();}
+  function authStyle(){
+    if(document.querySelector('#site-login-style'))return;
+    const st=document.createElement('style'); st.id='site-login-style'; st.textContent=`
+      body.auth-locked header,body.auth-locked main{display:none!important}.login-screen{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:linear-gradient(180deg,#f8fafc,#edf8f2);padding:20px}.login-card{width:min(440px,100%);background:#fff;border:1px solid #dbe8e1;border-radius:16px;box-shadow:0 18px 50px rgba(15,23,42,.14);padding:24px}.login-card h2{margin:0 0 8px;color:#0f513f}.login-card p{margin:0 0 16px;color:#64748b;line-height:1.7}.role-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}.role-tabs button{border:1px solid #cfe7dc;border-radius:10px;background:#f6fbf8;color:#0f513f;padding:11px;font-weight:900;cursor:pointer}.role-tabs button.active{background:#0f766e;color:#fff}.login-card label{display:block;margin:10px 0 6px;font-weight:900}.login-card input{box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font-size:15px}.login-card .submit{width:100%;border:0;border-radius:10px;background:#0f766e;color:white;padding:13px;margin-top:16px;font-weight:900}.login-error{display:none;margin-top:12px;color:#991b1b;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;padding:10px}.login-error.show{display:block}.auth-bar{display:none;align-items:center;justify-content:space-between;gap:10px;max-width:1160px;margin:12px auto;background:#ecf8f2;border:1px solid #cfe7dc;border-radius:12px;padding:10px 14px}.auth-bar strong{color:#0f513f}.auth-bar button{border:1px solid #cbd5e1;background:#fff;border-radius:9px;padding:8px 12px}.trainer-only header,.trainer-only .source-panel,.trainer-only .tabs,.trainer-only .filters,.trainer-only .actions,.trainer-only .note,.trainer-only .stats{display:none!important}.trainer-only .auth-bar,.dept-mode .auth-bar{display:flex}.trainer-only main{margin-top:12px}`;
+    document.head.appendChild(st);
   }
-  function trainerSelect(){
-    return document.querySelector('#trainerFilter') || [...document.querySelectorAll('select')].find(sel => [...sel.options].some(o => o.textContent.includes('كل المدربين')));
+  function authBar(auth){
+    if(!document.querySelector('.auth-bar')){const b=document.createElement('div'); b.className='auth-bar'; b.innerHTML='<strong></strong><button>تسجيل خروج</button>'; document.body.insertBefore(b,document.body.firstChild); b.querySelector('button').onclick=()=>{sessionStorage.removeItem('rctaiAuth');location.reload();};}
+    document.querySelector('.auth-bar strong').textContent=auth.role==='trainer'?'جدول المدرب: '+auth.name:'دخول رئيس القسم';
   }
-  function selectedTrainerName(){
-    const select = trainerSelect();
-    if (!select) return '';
-    const option = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0] : select.options[select.selectedIndex];
-    const name = option ? option.textContent.trim() : '';
-    return name.includes('كل المدربين') ? '' : name;
+  function showLogin(){
+    if(document.querySelector('.login-screen'))return; document.body.classList.add('auth-locked');
+    const el=document.createElement('div'); el.className='login-screen'; el.innerHTML=`<form class="login-card"><h2>تسجيل الدخول</h2><p>المدرب يدخل برقم الجوال المسجل، ورئيس القسم يدخل بالرمز.</p><div class="role-tabs"><button type="button" class="active" data-role="trainer">مدرب</button><button type="button" data-role="head">رئيس القسم</button></div><label>رقم الجوال</label><input inputmode="numeric" placeholder="05xxxxxxxx"><button class="submit">دخول</button><div class="login-error"></div></form>`; document.body.appendChild(el);
+    let role='trainer'; const input=el.querySelector('input'), label=el.querySelector('label'), err=el.querySelector('.login-error');
+    el.querySelectorAll('.role-tabs button').forEach(btn=>btn.onclick=()=>{role=btn.dataset.role; el.querySelectorAll('.role-tabs button').forEach(b=>b.classList.toggle('active',b===btn)); label.textContent=role==='trainer'?'رقم الجوال':'رمز رئيس القسم'; input.placeholder=role==='trainer'?'05xxxxxxxx':'رمز الدخول'; input.value=''; err.classList.remove('show');});
+    el.querySelector('form').onsubmit=async e=>{e.preventDefault(); err.classList.remove('show'); if(role==='head'){if(input.value.trim()!==HEAD_CODE){err.textContent='رمز رئيس القسم غير صحيح.'; err.classList.add('show'); return;} sessionStorage.setItem('rctaiAuth',JSON.stringify({role:'head',name:'رئيس القسم'})); applyAuth(); return;} await loadContacts(); const p=cleanPhone(input.value); const t=contacts.find(x=>x.phone===p||x.phone.endsWith(p)||p.endsWith(x.phone)); if(!t){err.textContent='لم أجد رقم الجوال في بيانات المدربين.'; err.classList.add('show'); return;} sessionStorage.setItem('rctaiAuth',JSON.stringify({role:'trainer',name:t.name,phone:t.phone})); applyAuth();};
   }
-  function findContact(name){
-    const target = normalizeName(name);
-    if (!target) return null;
-    let best = null, bestScore = 0;
-    const targetTokens = target.split(' ').filter(t => t.length > 1);
-    for (const contact of trainerContacts) {
-      const current = normalizeName(contact.name);
-      if (!current) continue;
-      let score = 0;
-      if (target === current) score += 100;
-      if (target.includes(current) || current.includes(target)) score += 60;
-      const currentTokens = current.split(' ').filter(t => t.length > 1);
-      const overlap = currentTokens.filter(t => targetTokens.includes(t)).length;
-      score += overlap * 12;
-      if (score > bestScore) { best = contact; bestScore = score; }
-    }
-    return bestScore >= 24 ? best : null;
+  function applyAuth(){
+    authStyle(); let auth=null; try{auth=JSON.parse(sessionStorage.getItem('rctaiAuth')||'null');}catch(e){}
+    if(!auth){showLogin(); return;} document.body.classList.remove('auth-locked'); document.querySelector('.login-screen')?.remove(); authBar(auth);
+    document.body.classList.toggle('trainer-only',auth.role==='trainer'); document.body.classList.toggle('dept-mode',auth.role==='head');
+    if(auth.role==='trainer'){trainerTab(); setTrainer(auth.name);}
   }
-  function activateTrainerTab(){
-    const trainerTab = [...document.querySelectorAll('.tabs button,.tab')].find(btn => btn.textContent.trim() === 'جداول المدربين');
-    if (trainerTab && !trainerTab.classList.contains('active')) trainerTab.click();
-  }
-  function ensureWhatsAppStyle(){
-    if (document.querySelector('#whatsapp-share-style')) return;
-    const style = document.createElement('style');
-    style.id = 'whatsapp-share-style';
-    style.textContent = `.whatsapp-share-btn{display:inline-flex!important;align-items:center!important;gap:7px!important;background:#16a34a!important;color:#fff!important;border-color:#16a34a!important}.whatsapp-share-btn:before{content:'☏';font-weight:900}@media print{.whatsapp-share-btn{display:none!important}}`;
-    document.head.appendChild(style);
-  }
-  function setPdfTitle(name){
-    document.title = name ? ('جدول المدرب - ' + name).replace(/[\\/:*?"<>|]+/g, ' ') : 'جدول المدربين';
-  }
-  function goToWhatsApp(targetWindow, phone, message){
-    const waUrl = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
-    if (targetWindow && !targetWindow.closed) targetWindow.location.href = waUrl;
-    else window.location.href = waUrl;
-  }
-  function openWaitingWindow(){
-    const win = window.open('about:blank', '_blank');
-    if (win) {
-      try {
-        win.document.open();
-        win.document.write('<!doctype html><html lang="ar" dir="rtl"><title>جاري فتح واتساب</title><body style="font-family:Tahoma,Arial;text-align:center;padding:40px"><h3>جاري تجهيز واتساب...</h3><p>احفظ ملف PDF من نافذة الطباعة، ثم سيظهر واتساب هنا.</p></body></html>');
-        win.document.close();
-      } catch(e) {}
-    }
-    return win;
-  }
-  function addWhatsAppTool(){
-    if (document.querySelector('.whatsapp-share-btn')) return true;
-    const actions = document.querySelector('.actions');
-    if (!actions) return false;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'action secondary whatsapp-share-btn';
-    btn.textContent = 'إرسال واتساب';
-    btn.title = 'طباعة جدول المدرب PDF ثم فتح واتساب على رقم المدرب';
-    btn.addEventListener('click', async () => {
-      const trainerName = selectedTrainerName();
-      if (!trainerName) {
-        alert('اختر مدرب محدد من فلتر المدرب قبل الإرسال عبر واتساب.');
-        return;
-      }
-      const waWindow = openWaitingWindow();
-      await loadTrainerContacts();
-      const contact = findContact(trainerName);
-      if (!contact || !contact.phone) {
-        if (waWindow) waWindow.close();
-        alert('لم أجد رقم جوال هذا المدرب في ملف بيانات المدربين tr99.csv.');
-        return;
-      }
-      activateTrainerTab();
-      setPdfTitle(trainerName);
-      const message = `السلام عليكم\nمرفق لكم جدولكم التدريبي بصيغة PDF.\n\n${document.title}`;
-      let finished = false;
-      const finish = () => {
-        if (finished) return;
-        finished = true;
-        window.removeEventListener('afterprint', finish);
-        document.body.classList.remove('printing-trainer');
-        goToWhatsApp(waWindow, contact.phone, message);
-      };
-      window.addEventListener('afterprint', finish, {once:true});
-      document.body.classList.add('printing-trainer');
-      try { window.focus(); } catch(e) {}
-      setTimeout(() => {
-        window.print();
-        setTimeout(finish, 1200);
-      }, 120);
-    });
-    actions.appendChild(btn);
-    return true;
-  }
-  function initWhatsApp(){
-    ensureWhatsAppStyle();
-    addWhatsAppTool();
-  }
-  initWhatsApp();
-  loadTrainerContacts();
-  setInterval(initWhatsApp, 600);
+  authStyle(); loadContacts(); let n=0; setInterval(()=>{n++; applyAuth();},500); applyAuth();
 })();
 </script>
 </body>
